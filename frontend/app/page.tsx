@@ -46,6 +46,9 @@ export default function Home() {
   const [busy,setBusy] = useState(false)
   const [connected,setConnected] = useState(false)
   const [token,setToken] = useState('')
+  const [authMode,setAuthMode] = useState('login')
+  const [email,setEmail] = useState('')
+  const [password,setPassword] = useState('')
   const [authorized,setAuthorized] = useState(false)
   const [initializing,setInitializing] = useState(true)
   const [thread,setThread] = useState('Latest messages')
@@ -84,6 +87,7 @@ export default function Home() {
     finally { setInitializing(false) }
   }
   useEffect(()=>{ refresh(true) },[])
+  useEffect(()=>{if(token && authMode!=='owner') refresh(true)},[token])
   useEffect(()=>{
     if(!notice || !authorized) return
     const timer=setTimeout(()=>setNotice(''),7000)
@@ -154,7 +158,7 @@ export default function Home() {
   const title = ({roast:'Roast Studio',conversations:'Conversations',activity:'Activity',platforms:'Connected socials',settings:'Settings'} as any)[tab]
 
   if(initializing) return <HubLoading/>
-  if(!authorized) return <main className="accessScreen"><div className="card accessCard"><div className="brand"><Logo large/><h1>RoastAI</h1></div><h2>Open your workspace</h2><p className="muted">Enter your workspace access token to connect securely.</p><form onSubmit={e=>{e.preventDefault();action(async()=>{await refresh(true)})}}><label>Workspace access token<input type="password" autoComplete="current-password" value={token} onChange={e=>setToken(e.target.value)} required/></label><button className="primary full" disabled={busy}>{busy?'Connecting to HUB…':'Connect'}</button></form>{notice&&<p role="alert">{notice}</p>}</div></main>
+  if(!authorized) return <main className="accessScreen"><div className="card accessCard"><div className="brand"><Logo large/><h1>RoastAI</h1></div><h2>{authMode==='signup'?'Create your account':'Welcome to RoastAI'}</h2><p className="muted">Your conversations and preferences stay private to your account.</p><div className="modeScroll">{[['login','Sign in'],['signup','Sign up'],['owner','Owner access']].map(([mode,label])=><button key={mode} className={'mode '+(authMode===mode?'selected':'')} onClick={()=>{setAuthMode(mode);setNotice('')}}>{label}</button>)}</div><form onSubmit={e=>{e.preventDefault();action(async()=>{if(authMode==='owner'){await refresh(true);return}const data=await request('/api/auth/'+(authMode==='signup'?'signup':'login'),{method:'POST',body:JSON.stringify({email,password})});setPassword('');setToken(data.token)})}}>{authMode==='owner'?<label>Workspace access token<input type="password" autoComplete="off" value={token} onChange={e=>setToken(e.target.value)} required/></label>:<><label>Email<input type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} required/></label><label>Password<input type="password" minLength={12} maxLength={128} autoComplete={authMode==='signup'?'new-password':'current-password'} value={password} onChange={e=>setPassword(e.target.value)} required/></label><small className="muted">Use at least 12 characters.</small></>}<button className="primary full" disabled={busy}>{busy?'Connecting to HUB…':authMode==='signup'?'Create account':authMode==='owner'?'Connect':'Sign in'}</button></form>{notice&&<p role="alert">{notice}</p>}</div></main>
   return <main>
     <aside className="sidebar">
       <div className="brand"><Logo/><div><b>Roast<span>AI</span></b><small>Gemini roast workspace</small></div></div>
@@ -162,16 +166,16 @@ export default function Home() {
       <nav aria-label="Workspace navigation">{nav.map(([id,label,icon])=><button key={id} className={tab===id?'nav active':'nav'} aria-label={label} aria-current={tab===id?'page':undefined} onClick={()=>{setTab(id);refresh()}}><Icon name={icon}/><span>{label}</span>{id==='activity'&&activities.length>0?<em>{Math.min(activities.length,99)}</em>:null}</button>)}</nav>
       <div className="sideCard">
         <div className="miniLogo"><Logo/></div><div><strong>{settings.enabled?'Bot is live':'Bot is paused'}</strong><small>{settings.dry_run?'Dry-run mode':'Live delivery'}</small></div>
-        <button aria-label="Toggle bot" aria-pressed={settings.enabled} onClick={toggle} disabled={busy||loading} className={settings.enabled?'tinySwitch on':'tinySwitch'}><i/></button>
+        <button aria-label="Toggle bot" aria-pressed={settings.enabled} onClick={toggle} disabled={busy||loading||authMode!=='owner'} title={authMode==='owner'?'Toggle social bot':'Social bot controls are owner-only'} className={settings.enabled?'tinySwitch on':'tinySwitch'}><i/></button>
       </div>
-      <button className="emergency" onClick={emergency}>Emergency stop</button>
-      <button className="ghost" onClick={()=>{setToken('');setAuthorized(false);setReply('');setMessages([]);setNotice('Signed out')}}>Sign out</button><div className="privacy">Secure workspace • Keys stay server-side</div>
+      <button className="emergency" disabled={authMode!=='owner'} title={authMode==='owner'?'Stop social delivery':'Social bot controls are owner-only'} onClick={emergency}>Emergency stop</button>
+      <button className="ghost" onClick={()=>{request('/api/auth/logout',{method:'POST'}).catch(()=>{});setToken('');setAuthorized(false);setReply('');setMeaning('');setMessages([]);setConvos([]);setActivities([]);setNotice('Signed out')}}>Sign out</button><div className="privacy">Secure workspace • Keys stay server-side</div>
     </aside>
 
     <section className="content">
       <header className="topbar">
         <div><div className="eyebrow">ROASTAI / {tab.toUpperCase()}</div><h1>{title}</h1><p>Fast comebacks, multilingual control, and a clean command center.</p></div>
-        <div className="topRight"><div className={connected&&health.gemini?'gemini':'gemini pendingGemini'}><i/> Gemini <span>{!connected?'Offline':health.gemini?'Configured':'Setup needed'}</span></div><button className={settings.enabled?'power on':'power'} onClick={toggle} disabled={busy||loading}><i/>{settings.enabled?'Bot ON':'Bot OFF'}</button></div>
+        <div className="topRight"><div className={connected&&health.gemini?'gemini':'gemini pendingGemini'}><i/> Gemini <span>{!connected?'Offline':health.gemini?'Configured':'Setup needed'}</span></div><button className={settings.enabled?'power on':'power'} onClick={toggle} disabled={busy||loading||authMode!=='owner'}><i/>{settings.enabled?'Bot ON':'Bot OFF'}</button></div>
       </header>
 
       {notice && <div className="toast" role="status" aria-live="polite">{notice}</div>}

@@ -11,6 +11,7 @@ from .models import BotSettings, RoastRequest
 from .ai import generate_with_meaning
 from .meta import verify_signature, parse_events, whatsapp_send, instagram_send
 from . import store
+from . import accounts
 
 DEFAULT = {**BotSettings().model_dump(), 'enabled':settings.bot_enabled,'dry_run':settings.dry_run,
     'roast_mode':settings.roast_mode,'intensity':settings.roast_intensity,'profanity_level':settings.profanity_level,
@@ -106,16 +107,29 @@ limits=defaultdict(deque)
 async def protect(request: Request, call_next):
     if request.url.path.startswith('/api/'):
         token=request.headers.get('authorization','').removeprefix('Bearer ')
-        if settings.admin_token and not hmac.compare_digest(token.encode(),settings.admin_token.encode()):
-            return JSONResponse({'detail':'Workspace access token required'},status_code=401)
+        public=request.url.path in ('/api/auth/signup','/api/auth/login')
+        admin=not settings.admin_token or hmac.compare_digest(token.encode(),settings.admin_token.encode())
+        user=None if admin or public else await run_in_threadpool(accounts.authenticate,token)
+        if not public and not admin and user is None:
+            return JSONResponse({'detail':'Sign in required'},status_code=401)
+        store.owner.set(user or 0)
+        if user and (request.url.path.startswith('/api/bot/') or request.url.path=='/api/platforms/status'):
+            if request.url.path.startswith('/api/bot/'):
+                return JSONResponse({'detail':'Social bot controls are owner-only'},status_code=403)
+
         key=request.client.host if request.client else 'unknown'; now=time.monotonic()
         bucket=limits[key]
         while bucket and bucket[0]<now-60: bucket.popleft()
         if len(bucket)>=settings.rate_limit_per_minute*6 and request.url.path not in ('/api/bot/stop','/api/bot/emergency-stop'):
             return JSONResponse({'detail':'Too many requests. Try again shortly.'},status_code=429,headers={'Retry-After':'60'})
         bucket.append(now)
+        if public:
+            auth_bucket=limits['auth:'+key]
+            while auth_bucket and auth_bucket[0]<now-60: auth_bucket.popleft()
+            if len(auth_bucket)>=10: return JSONResponse({'detail':'Too many sign-in attempts. Try again in a minute.'},status_code=429)
+            auth_bucket.append(now)
         if request.url.path in ('/api/roast','/api/preview'):
-            bucket=limits['generation']
+            bucket=limits['generation:'+str(store.owner.get())]
             while bucket and bucket[0]<now-60: bucket.popleft()
             if len(bucket)>=settings.rate_limit_per_minute:
                 return JSONResponse({'detail':'Generation limit reached. Try again shortly.'},status_code=429,headers={'Retry-After':'60'})
@@ -125,6 +139,16 @@ async def protect(request: Request, call_next):
     if request.url.path.startswith('/api/'): response.headers['Cache-Control']='no-store'
     return response
 
+@app.post('/api/auth/signup')
+def signup(x:accounts.Credentials): return accounts.sign_in(x,True)
+@app.post('/api/auth/login')
+def login(x:accounts.Credentials): return accounts.sign_in(x)
+@app.post('/api/auth/logout')
+def logout(request:Request):
+    import hashlib
+    token=request.headers.get('authorization','').removeprefix('Bearer ')
+    store.execute('DELETE FROM sessions WHERE digest=:d',d=hashlib.sha256(token.encode()).hexdigest())
+    return {'ok':True}
 @app.get('/health')
 def health():
     store.query('SELECT 1')

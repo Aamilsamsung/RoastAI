@@ -171,7 +171,7 @@ def test_adopts_original_v2_database_without_data_loss(tmp_path):
         assert connection.execute('SELECT text FROM messages').fetchone()[0]=='Original data'
         assert connection.execute('SELECT message FROM activity').fetchone()[0]=='Original log'
         assert connection.execute('SELECT message_id FROM processed_messages').fetchone()[0]=='old-mid'
-        assert connection.execute('SELECT version_num FROM alembic_version').fetchone()[0]=='0001'
+        assert connection.execute('SELECT version_num FROM alembic_version').fetchone()[0]=='0002'
 
 def test_message_cursor_pagination_and_validation(client):
     for i in range(125): store.add_message('local','pages','Owner','','incoming',str(i))
@@ -183,3 +183,26 @@ def test_message_cursor_pagination_and_validation(client):
     assert client.get('/api/messages?limit=101',headers=AUTH).status_code==422
     assert client.get('/api/messages?before_id=0',headers=AUTH).status_code==422
     assert not client.get(f"/api/messages?sender_id=other&before_id={first[0]['id']}",headers=AUTH).json()
+
+
+def test_accounts_isolate_history_settings_and_logout(client,monkeypatch):
+    import secrets
+    def signup():
+        response=client.post('/api/auth/signup',json={'email':secrets.token_hex(8)+'@example.com','password':'a-strong-test-password'})
+        assert response.status_code==200,response.text
+        return {'Authorization':'Bearer '+response.json()['token']}
+    a,b=signup(),signup()
+    monkeypatch.setattr(main,'generate_with_meaning',lambda *args:('private reply','meaning'))
+    assert client.post('/api/roast',headers=a,json={'message':'private input'}).status_code==200
+    assert len(client.get('/api/messages',headers=a).json())==2
+    assert client.get('/api/messages',headers=b).json()==[]
+    assert client.get('/api/messages',headers=AUTH).json()==[]
+    assert client.get('/api/activity',headers=b).json()==[]
+    preferences=client.get('/api/settings',headers=a).json();preferences['intensity']=2
+    assert client.put('/api/settings',headers=a,json=preferences).status_code==200
+    assert client.get('/api/settings',headers=b).json()['intensity']!=2
+    assert client.post('/api/bot/start',headers=a).status_code==403
+    client.delete('/api/conversations',headers=b)
+    assert len(client.get('/api/messages',headers=a).json())==2
+    assert client.post('/api/auth/logout',headers=a).status_code==200
+    assert client.get('/api/messages',headers=a).status_code==401

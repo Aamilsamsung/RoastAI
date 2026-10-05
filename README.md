@@ -4,7 +4,7 @@ Existing Next.js/TypeScript v2 purple workspace and FastAPI backend, with Gemini
 
 ## Architecture and operating scope
 
-Two public Render web services plus private Render PostgreSQL. The frontend browser calls the backend origin through `NEXT_PUBLIC_API_URL`; Gemini and Meta credentials exist only in the backend environment. An owner enters the separately generated `ADMIN_TOKEN` into the workspace login; it stays in React memory, is sent as a Bearer credential over HTTPS, and is cleared on sign-out or reload. Never distribute it to untrusted users. This release is a single-owner workspace, not multi-tenant SaaS. Changing the token in Render revokes existing access.
+Two public Render web services plus private Render PostgreSQL. The frontend browser calls the backend origin through `NEXT_PUBLIC_API_URL`; Gemini and Meta credentials exist only in the backend environment. An owner enters the separately generated `ADMIN_TOKEN` into the workspace login; it stays in React memory, is sent as a Bearer credential over HTTPS, and is cleared on sign-out or reload. Never distribute it to untrusted users. Owner access uses ADMIN_TOKEN; friends use email/password accounts with isolated Studio conversations, activity and preferences. Social integrations remain exclusively in the owner workspace. Changing the token in Render revokes existing access.
 
 The existing Studio, Conversations, Activity, Platforms and Settings remain. Studio changes save before generation so modes, intensity, voice, profanity and language controls apply immediately. Manual Studio generation works with Bot OFF for testing; emergency stop blocks it. Bot ON/OFF controls automatic social replies. Explicit Start resets emergency stop. Save cannot turn a paused bot back on.
 
@@ -151,7 +151,7 @@ Bot preference environment values are **initial defaults**. Once stored, saved d
 
 Create Render PostgreSQL in the backend's region. Use its internal URL for DATABASE_URL. The Blueprint denies external database connections by default. Production refuses SQLite rather than silently saving conversations on an ephemeral filesystem. Configure backups appropriate to the purchased database plan and test restoration.
 
-Migrations run before deploy and also safely check the current revision on startup. `alembic current` should report `0001 (head)`.
+Migrations run before deploy and also safely check the current revision on startup. `alembic current` should report `0002 (head)`.
 
 If you have an older `roastbot.db` outside the uploaded ZIP, back it up before migration. To transfer it, migrate an **empty PostgreSQL database before starting the backend**, set DATABASE_URL to the destination, then from `backend`:
 
@@ -226,7 +226,7 @@ Tests use isolated SQLite databases and substitute provider calls **only inside 
 
 ## 12. Production limitations requiring external work
 
-Supply Gemini/Meta credentials, supported model access, account permissions, app review and subscriptions. No live provider calls can be verified without those. Complete a real dry-run and live delivery smoke test on your Render account. This archive is deployable configuration and validated application code, not proof of a completed cloud deployment. Shared admin access is intentional for one owner; multi-user identity, tenant isolation, OAuth customer onboarding and high-volume queue infrastructure are future additions. Backups, credentials rotation and ongoing operations belong to the deployment owner.
+Supply Gemini/Meta credentials, supported model access, account permissions, app review and subscriptions. No live provider calls can be verified without those. Complete a real dry-run and live delivery smoke test on your Render account. This archive is deployable configuration and validated application code, not proof of a completed cloud deployment. Shared admin access is intentional for one owner; OAuth social customer onboarding and high-volume queue infrastructure are future additions. Backups, credentials rotation and ongoing operations belong to the deployment owner.
 
 ## Official references
 
@@ -250,3 +250,9 @@ The initial connection state and Next.js route-loading boundary show **Connectin
 This is the application's own loading UI. A Render platform cold-start page displayed before the frontend server can return HTML is controlled by Render and cannot be replaced by React code. The free services specified in this Blueprint can sleep after inactivity.
 
 Free resources were created on 2026-10-05. Frontend: https://roastai-frontend.onrender.com. Backend: https://roastai-backend-ir7y.onrender.com. Backend DATABASE_URL and Gemini credentials still require configuration; resource creation is not proof of a healthy deployment. The free Render database expires on 2026-11-04; export or migrate data before that date.
+
+## Friend accounts
+
+Friends select Sign up on the access screen, enter an email and a password of at least 12 characters, and receive their own private workspace. Passwords use salted scrypt hashes; session bearer tokens are random, stored hashed in PostgreSQL, expire after 24 hours, and are revoked on sign-out. The browser holds tokens in memory only; reloading requires login. Account history, activity and settings are filtered by the authenticated user at the backend. No client-supplied owner ID is trusted. Legacy records remain in owner workspace 0. Social bot start/stop/emergency controls require owner access; friends may use Studio with independent settings. Authentication has IP-based cooldown protection.
+
+Email verification and password recovery email are not implemented; accounts can sign in immediately, and forgotten passwords currently need a future recovery flow. Public signup consumes the configured owner's Gemini quota, bounded by per-user generation limits and shared IP limits; configure Google quota controls before distributing widely. No per-user Meta account connection is implemented. Free Render database expiration still applies to all account data.
