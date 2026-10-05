@@ -1,0 +1,70 @@
+databases:
+  - name: roastai-db
+    plan: basic-256mb
+    region: oregon
+    databaseName: roastai
+    user: roastai
+    ipAllowList: []
+services:
+  - type: web
+    name: roastai-backend
+    runtime: python
+    region: oregon
+    plan: starter
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    preDeployCommand: python -m alembic upgrade head
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1
+    healthCheckPath: /health
+    numInstances: 1
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.14
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: roastai-db
+          property: connectionString
+      - key: ADMIN_TOKEN
+        generateValue: true
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.8-flash
+      - key: AI_PROVIDER
+        value: gemini
+      - key: AI_TIMEOUT_SECONDS
+        value: "30"
+      - key: RATE_LIMIT_PER_MINUTE
+        value: "20"
+      - key: WHATSAPP_API_VERSION
+        value: v23.0
+      - key: INSTAGRAM_API_VERSION
+        value: v23.0
+      - key: INSTAGRAM_LOGIN_TYPE
+        value: instagram
+      - key: FRONTEND_URL
+        sync: false
+      - key: DRY_RUN
+        value: "true"
+      - key: BOT_ENABLED
+        value: "false"
+  - type: web
+    name: roastai-frontend
+    runtime: node
+    region: oregon
+    plan: starter
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: 22.22.0
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_TELEMETRY_DISABLED
+        value: "1"
+      - key: NEXT_PUBLIC_API_URL
+        sync: false

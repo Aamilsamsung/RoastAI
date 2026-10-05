@@ -1,0 +1,58 @@
+name: Validate RoastAI
+on:
+  push:
+  pull_request:
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements-dev.txt
+        working-directory: backend
+      - run: python -m compileall -q app migrations scripts && python -m pytest -q
+        working-directory: backend
+  postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: roastai_test
+          POSTGRES_PASSWORD: disposable_ci_password
+          POSTGRES_DB: roastai_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U roastai_test -d roastai_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements-dev.txt
+        working-directory: backend
+      - run: python -m pytest tests/test_postgres.py -q
+        working-directory: backend
+        env:
+          TEST_POSTGRES_URL: postgresql://roastai_test:disposable_ci_password@localhost:5432/roastai_test
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci && npm run build && npm run typecheck
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_API_URL: https://roastai-backend.example.com
+      - run: npm audit --omit=dev
+        working-directory: frontend
