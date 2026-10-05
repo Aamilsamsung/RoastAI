@@ -3,7 +3,7 @@ export default function Logo({large=false}:{large?:boolean}) {
     <svg viewBox="0 0 64 64" className="logoSvg">
       <defs>
         <linearGradient id="flame" x1="0" x2="1" y1="0" y2="1">
-          <stop offset="0" stopColor="#ff42e8"/><stop offset=".55" stopColor="#8b3dff"/><stop offset="1" stopColor="#5420ff"/>
+          <stop offset="0" stopColor="#dcad7d"/><stop offset=".55" stopColor="#a46b43"/><stop offset="1" stopColor="#6e4028"/>
         </linearGradient>
       </defs>
       <path fill="url(#flame)" d="M31 5c7 10 2 15 9 19 5-5 8-10 7-15 11 10 13 24 8 35-5 11-15 16-27 14C16 56 9 47 10 35c1-10 7-18 17-25-1 7-1 11 2 15 4-5 4-11 2-20z"/>
