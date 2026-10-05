@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.concurrency import run_in_threadpool
 from .config import settings
 from .models import BotSettings, RoastRequest
-from .ai import generate_with_meaning
+from .ai import generate_with_meaning, provider_error_detail
 from .meta import verify_signature, parse_events, whatsapp_send, instagram_send
 from . import store
 from . import accounts
@@ -177,9 +177,10 @@ def roast(x: RoastRequest):
     if cfg['emergency_stop']: raise HTTPException(409,'Emergency stop is active. Start the bot to reset it.')
     try:
         reply,meaning=generate_with_meaning(x.message,SimpleNamespace(**cfg),x.sender_name,store.recent('local','roast-me'),x.input_language,x.reply_language,x.script_mode)
-    except Exception:
-        store.log('ERROR','AI generation failed; check provider configuration or retry')
-        raise HTTPException(502,'AI provider unavailable. Check the server API key, model, quota, or retry shortly.')
+    except Exception as error:
+        detail=provider_error_detail(error)
+        store.log('ERROR',detail)
+        raise HTTPException(502,detail)
     if current()['safety_epoch']!=cfg['safety_epoch']: raise HTTPException(409,'Generation cancelled because bot settings changed.')
     store.add_message('local','roast-me','You','','incoming',x.message)
     store.add_message('local','roast-me','RoastAI','','outgoing',reply)

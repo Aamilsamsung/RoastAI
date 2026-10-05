@@ -206,3 +206,29 @@ def test_accounts_isolate_history_settings_and_logout(client,monkeypatch):
     assert len(client.get('/api/messages',headers=a).json())==2
     assert client.post('/api/auth/logout',headers=a).status_code==200
     assert client.get('/api/messages',headers=a).status_code==401
+
+
+def test_gemini_supported_thinking_and_single_call(monkeypatch):
+    from app import ai
+    from types import SimpleNamespace
+    calls=[]
+    class Client:
+        def __init__(self,**kwargs): self.models=self
+        def __enter__(self): return self
+        def __exit__(self,*args): pass
+        def generate_content(self,**kwargs):
+            calls.append(kwargs)
+            return SimpleNamespace(text='REPLY: comeback\nMEANING: English meaning')
+    monkeypatch.setattr(ai.genai,'Client',Client)
+    monkeypatch.setattr(ai.settings,'gemini_api_key','test-key-not-a-real-credential')
+    monkeypatch.setattr(ai.settings,'gemini_model','gemini-3.8-flash')
+    assert ai._gemini('prompt').startswith('REPLY:')
+    assert len(calls)==1
+    assert calls[0]['config'].thinking_config.thinking_level.value=='LOW'
+    assert calls[0]['config'].max_output_tokens==480
+
+def test_provider_error_does_not_expose_upstream_details():
+    from app.ai import provider_error_detail
+    from google.genai.errors import ClientError
+    detail=provider_error_detail(ClientError(429,{'error':{'message':'secret-token-url'}}))
+    assert 'quota' in detail.lower() and 'secret-token' not in detail

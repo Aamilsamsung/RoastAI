@@ -3,6 +3,22 @@ import urllib.request
 from google import genai
 from .config import settings
 
+class ProviderConfigurationError(RuntimeError): pass
+
+def provider_error_detail(error):
+    if isinstance(error,ProviderConfigurationError):
+        return 'Gemini API key is missing. The owner must set GEMINI_API_KEY in backend Render Environment.'
+    from google.genai.errors import APIError
+    if isinstance(error,APIError):
+        return {
+            400:'Gemini rejected the request configuration or API key. Check the backend key and selected model.',
+            401:'Gemini API key is invalid. Update GEMINI_API_KEY on the backend.',
+            403:'Gemini access denied. Check API key restrictions and Google project permissions.',
+            404:'Gemini model is unavailable for this project. Check GEMINI_MODEL on the backend.',
+            429:'Gemini quota or rate limit reached. Wait and retry, or check Google AI Studio quota.',
+        }.get(error.code,'Gemini is temporarily unavailable. Please retry shortly.')
+    return 'AI provider unavailable. Check the server API key, model, quota, or retry shortly.'
+
 MODES = {
     "normal": "friendly playful teasing",
     "sarcastic": "clever sarcastic banter",
@@ -54,11 +70,11 @@ Message: {message}"""
 
 def _gemini(prompt):
     if not settings.gemini_api_key:
-        raise RuntimeError("GEMINI_API_KEY is missing. Add it to backend/.env.")
+        raise ProviderConfigurationError("Missing backend Gemini key")
     from google.genai import types
     with genai.Client(api_key=settings.gemini_api_key, http_options=types.HttpOptions(timeout=settings.ai_timeout_seconds * 1000)) as client:
         thinking = (types.ThinkingConfig(thinking_budget=0) if settings.gemini_model.startswith("gemini-2.5")
-                    else types.ThinkingConfig(thinking_level="minimal"))
+                    else types.ThinkingConfig(thinking_level="low"))
         response = client.models.generate_content(
             model=settings.gemini_model, contents=prompt,
             config=types.GenerateContentConfig(thinking_config=thinking, max_output_tokens=480, temperature=0.8),
