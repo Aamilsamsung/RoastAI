@@ -180,6 +180,8 @@ def roast(x: RoastRequest):
     except Exception as error:
         detail=provider_error_detail(error)
         store.log('ERROR',detail)
+        import logging
+        logging.getLogger('uvicorn.error').warning('AI generation failure type=%s detail=%s',type(error).__name__,detail)
         raise HTTPException(502,detail)
     if current()['safety_epoch']!=cfg['safety_epoch']: raise HTTPException(409,'Generation cancelled because bot settings changed.')
     store.add_message('local','roast-me','You','','incoming',x.message)

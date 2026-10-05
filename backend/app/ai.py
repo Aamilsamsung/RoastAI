@@ -4,10 +4,15 @@ from google import genai
 from .config import settings
 
 class ProviderConfigurationError(RuntimeError): pass
+class ProviderResponseError(RuntimeError): pass
 
 def provider_error_detail(error):
     if isinstance(error,ProviderConfigurationError):
         return 'Gemini API key is missing. The owner must set GEMINI_API_KEY in backend Render Environment.'
+    if isinstance(error,ProviderResponseError): return str(error)
+    import httpx
+    if isinstance(error,(TimeoutError,httpx.TimeoutException)): return 'Gemini timed out. Please retry with a shorter message.'
+    if isinstance(error,httpx.NetworkError): return 'The backend could not reach Gemini. Please retry shortly.'
     from google.genai.errors import APIError
     if isinstance(error,APIError):
         return {
@@ -77,10 +82,10 @@ def _gemini(prompt):
                     else types.ThinkingConfig(thinking_level="low"))
         response = client.models.generate_content(
             model=settings.gemini_model, contents=prompt,
-            config=types.GenerateContentConfig(thinking_config=thinking, max_output_tokens=480, temperature=0.8),
+            config=types.GenerateContentConfig(thinking_config=thinking, max_output_tokens=1536, temperature=0.8),
         )
         result = (response.text or "").strip()
-        if not result: raise RuntimeError("AI returned no reply")
+        if not result: raise ProviderResponseError("Gemini returned no reply; the output may have been blocked or exhausted its token budget. Try a different message.")
         return result
 
 def _ollama(prompt):
@@ -112,9 +117,9 @@ def _parse_pair(raw):
         elif line.upper().startswith("MEANING:"):
             meaning = line.split(":", 1)[1].strip()
     if not reply:
-        raise RuntimeError("AI returned an invalid reply format")
+        raise ProviderResponseError("Gemini returned an unexpected reply format. Please retry.")
     if not meaning:
-        raise RuntimeError("AI returned no English meaning")
+        raise ProviderResponseError("Gemini returned an incomplete reply without English meaning. Please retry.")
     return reply, meaning
 
 def generate(message, cfg, sender_name="Someone", context=None,

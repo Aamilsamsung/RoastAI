@@ -49,6 +49,7 @@ export default function Home() {
   const [authMode,setAuthMode] = useState('login')
   const [email,setEmail] = useState('')
   const [password,setPassword] = useState('')
+  const [sessionReady,setSessionReady] = useState(false)
   const [authorized,setAuthorized] = useState(false)
   const [initializing,setInitializing] = useState(true)
   const [thread,setThread] = useState('Latest messages')
@@ -60,7 +61,7 @@ export default function Home() {
     const response = await fetch(API+path, {...options, cache:'no-store', headers:{'Content-Type':'application/json',Authorization:'Bearer '+token,...options.headers}, signal:AbortSignal.timeout(timeoutMs)})
     const data = await response.json().catch(()=>({detail:'The server returned an invalid response'}))
     if(!response.ok) {
-      if(response.status===401) setAuthorized(false)
+      if(response.status===401 && !path.startsWith('/api/auth/')) {setAuthorized(false);setToken('');try{sessionStorage.removeItem('roastai-session')}catch{}}
       throw Error(typeof data.detail==='string'?data.detail:'Check your inputs and try again.')
     }
     return data
@@ -86,8 +87,12 @@ export default function Home() {
     } catch(e:any) { setConnected(false); setNotice(e.message) }
     finally { setInitializing(false) }
   }
-  useEffect(()=>{ refresh(true) },[])
-  useEffect(()=>{if(token && authMode!=='owner') refresh(true)},[token])
+  useEffect(()=>{
+    try {const saved=JSON.parse(sessionStorage.getItem('roastai-session')||'null');if(saved?.token){setAuthMode(saved.mode==='owner'?'owner':'login');setToken(saved.token)}}catch{}
+    setSessionReady(true)
+  },[])
+  useEffect(()=>{if(!sessionReady)return;if(token && authMode!=='owner') refresh(true);else if(token && initializing) refresh(true);else setInitializing(false)},[sessionReady,token])
+  useEffect(()=>{if(authorized && token){try{sessionStorage.setItem('roastai-session',JSON.stringify({token,mode:authMode}))}catch{}}},[authorized,token,authMode])
   useEffect(()=>{
     if(!notice || !authorized) return
     const timer=setTimeout(()=>setNotice(''),7000)
@@ -169,7 +174,7 @@ export default function Home() {
         <button aria-label="Toggle bot" aria-pressed={settings.enabled} onClick={toggle} disabled={busy||loading||authMode!=='owner'} title={authMode==='owner'?'Toggle social bot':'Social bot controls are owner-only'} className={settings.enabled?'tinySwitch on':'tinySwitch'}><i/></button>
       </div>
       <button className="emergency" disabled={authMode!=='owner'} title={authMode==='owner'?'Stop social delivery':'Social bot controls are owner-only'} onClick={emergency}>Emergency stop</button>
-      <button className="ghost" onClick={()=>{request('/api/auth/logout',{method:'POST'}).catch(()=>{});setToken('');setAuthorized(false);setReply('');setMeaning('');setMessages([]);setConvos([]);setActivities([]);setNotice('Signed out')}}>Sign out</button><div className="privacy">Secure workspace • Keys stay server-side</div>
+      <button className="ghost" onClick={()=>{request('/api/auth/logout',{method:'POST'}).catch(()=>{});try{sessionStorage.removeItem('roastai-session')}catch{};setToken('');setAuthorized(false);setReply('');setMeaning('');setMessages([]);setConvos([]);setActivities([]);setNotice('Signed out')}}>Sign out</button><div className="privacy">Secure workspace • Keys stay server-side</div>
     </aside>
 
     <section className="content">

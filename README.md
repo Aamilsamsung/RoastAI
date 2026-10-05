@@ -4,7 +4,7 @@ Existing Next.js/TypeScript v2 purple workspace and FastAPI backend, with Gemini
 
 ## Architecture and operating scope
 
-Two public Render web services plus private Render PostgreSQL. The frontend browser calls the backend origin through `NEXT_PUBLIC_API_URL`; Gemini and Meta credentials exist only in the backend environment. An owner enters the separately generated `ADMIN_TOKEN` into the workspace login; it stays in React memory, is sent as a Bearer credential over HTTPS, and is cleared on sign-out or reload. Never distribute it to untrusted users. Owner access uses ADMIN_TOKEN; friends use email/password accounts with isolated Studio conversations, activity and preferences. Social integrations remain exclusively in the owner workspace. Changing the token in Render revokes existing access.
+Two public Render web services plus private Render PostgreSQL. The frontend browser calls the backend origin through `NEXT_PUBLIC_API_URL`; Gemini and Meta credentials exist only in the backend environment. An owner enters the separately generated `ADMIN_TOKEN` into the workspace login; it is retained in sessionStorage for the current browser tab, is sent as a Bearer credential over HTTPS, and is cleared on sign-out or reload. Never distribute it to untrusted users. Owner access uses ADMIN_TOKEN; friends use email/password accounts with isolated Studio conversations, activity and preferences. Social integrations remain exclusively in the owner workspace. Changing the token in Render revokes existing access.
 
 The existing Studio, Conversations, Activity, Platforms and Settings remain. Studio changes save before generation so modes, intensity, voice, profanity and language controls apply immediately. Manual Studio generation works with Bot OFF for testing; emergency stop blocks it. Bot ON/OFF controls automatic social replies. Explicit Start resets emergency stop. Save cannot turn a paused bot back on.
 
@@ -164,7 +164,7 @@ All available messages, activity, processed IDs, saved settings and webhook jobs
 
 ## 6. Gemini configuration
 
-Create your own key in Google AI Studio and set it on the backend only. Gemini is the default provider. Generation uses the Google SDK `models.generate_content`: one request asks for `REPLY:` and `MEANING:`, with minimal thinking and 480 output tokens. Gemini 2.5 Flash uses thinking_budget=0 if you select that model. A missing/blocked response, quota error, timeout or invalid format produces a sanitized UI error and audit event; no fake reply is substituted. Model access and billing depend on your Google project. Confirm your selected model supports the configured thinking control.
+Create your own key in Google AI Studio and set it on the backend only. Gemini is the default provider. Generation uses the Google SDK `models.generate_content`: one request asks for `REPLY:` and `MEANING:`, with low thinking and a 1536-token combined generation budget; visible comeback length remains bounded by the configured character limit. Gemini 2.5 Flash uses thinking_budget=0 if you select that model. A missing/blocked response, quota error, timeout or invalid format produces a sanitized UI error and audit event; no fake reply is substituted. Model access and billing depend on your Google project. Confirm your selected model supports the configured thinking control.
 
 Optional Ollama support remains, using a server-side reachable URL and bounded response timeout. An Ollama instance on your laptop is not accessible through Render's loopback address.
 
@@ -194,7 +194,7 @@ Failed jobs are retained as `failed`; crash-interrupted sends are marked `uncert
 ## 10. Troubleshooting
 
 - Frontend can't connect: check NEXT_PUBLIC_API_URL has HTTPS backend origin, no `/api` suffix; rebuild frontend. Check backend FRONTEND_URL matches frontend origin.
-- Workspace 401: use the backend ADMIN_TOKEN, not Gemini or Meta credentials. Reload clears it; re-enter it. Rotate compromised tokens.
+- Workspace 401: use the backend ADMIN_TOKEN, not Gemini or Meta credentials. Sign-out clears it; expired account sessions require login. Rotate compromised tokens.
 - Backend fails startup: check production PostgreSQL URL, 32+ character admin token, HTTPS frontend URL and migration logs.
 - `/health` fails: database connectivity or schema problem. Verify database and backend regions/internal connection string.
 - Studio 502: check Gemini model access, key, quota and billing. Errors are sanitized so secrets do not enter logs.
@@ -253,6 +253,6 @@ Free resources were created on 2026-10-05. Frontend: https://roastai-frontend.on
 
 ## Friend accounts
 
-Friends select Sign up on the access screen, enter an email and a password of at least 12 characters, and receive their own private workspace. Passwords use salted scrypt hashes; session bearer tokens are random, stored hashed in PostgreSQL, expire after 24 hours, and are revoked on sign-out. The browser holds tokens in memory only; reloading requires login. Account history, activity and settings are filtered by the authenticated user at the backend. No client-supplied owner ID is trusted. Legacy records remain in owner workspace 0. Social bot start/stop/emergency controls require owner access; friends may use Studio with independent settings. Authentication has IP-based cooldown protection.
+Friends select Sign up on the access screen, enter an email and a password of at least 12 characters, and receive their own private workspace. Passwords use salted scrypt hashes; session bearer tokens are random, stored hashed in PostgreSQL, expire after 24 hours, and are revoked on sign-out. The browser retains tokens in sessionStorage for the current tab; refresh restores the session, while sign-out clears it. Sessions still expire after 24 hours. Account history, activity and settings are filtered by the authenticated user at the backend. No client-supplied owner ID is trusted. Legacy records remain in owner workspace 0. Social bot start/stop/emergency controls require owner access; friends may use Studio with independent settings. Authentication has IP-based cooldown protection.
 
 Email verification and password recovery email are not implemented; accounts can sign in immediately, and forgotten passwords currently need a future recovery flow. Public signup consumes the configured owner's Gemini quota, bounded by per-user generation limits and shared IP limits; configure Google quota controls before distributing widely. No per-user Meta account connection is implemented. Free Render database expiration still applies to all account data.

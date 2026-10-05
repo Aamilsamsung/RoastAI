@@ -225,7 +225,7 @@ def test_gemini_supported_thinking_and_single_call(monkeypatch):
     assert ai._gemini('prompt').startswith('REPLY:')
     assert len(calls)==1
     assert calls[0]['config'].thinking_config.thinking_level.value=='LOW'
-    assert calls[0]['config'].max_output_tokens==480
+    assert calls[0]['config'].max_output_tokens==1536
 
 def test_provider_error_does_not_expose_upstream_details():
     from app.ai import provider_error_detail
