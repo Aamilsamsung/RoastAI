@@ -8,6 +8,12 @@ class Settings(BaseSettings):
     frontend_url: str = "http://localhost:3000"
     cors_origins: str = ""
     admin_token: str = ""
+    google_client_id: str = ""
+    facebook_page_access_token: str = ""
+    facebook_page_id: str = ""
+    facebook_api_version: str = "v23.0"
+    snapchat_access_token: str = ""
+    snapchat_profile_id: str = ""
     instagram_api_version: str = "v23.0"
     instagram_login_type: Literal["instagram", "facebook"] = "instagram"
     ai_timeout_seconds: int = Field(30,ge=1,le=120)

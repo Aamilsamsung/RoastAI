@@ -171,7 +171,7 @@ def test_adopts_original_v2_database_without_data_loss(tmp_path):
         assert connection.execute('SELECT text FROM messages').fetchone()[0]=='Original data'
         assert connection.execute('SELECT message FROM activity').fetchone()[0]=='Original log'
         assert connection.execute('SELECT message_id FROM processed_messages').fetchone()[0]=='old-mid'
-        assert connection.execute('SELECT version_num FROM alembic_version').fetchone()[0]=='0002'
+        assert connection.execute('SELECT version_num FROM alembic_version').fetchone()[0]=='0003'
 
 def test_message_cursor_pagination_and_validation(client):
     for i in range(125): store.add_message('local','pages','Owner','','incoming',str(i))
@@ -232,3 +232,79 @@ def test_provider_error_does_not_expose_upstream_details():
     from google.genai.errors import ClientError
     detail=provider_error_detail(ClientError(429,{'error':{'message':'secret-token-url'}}))
     assert 'quota' in detail.lower() and 'secret-token' not in detail
+
+
+def test_google_nonce_replay_and_existing_account_link(client,monkeypatch):
+    import secrets
+    from app import accounts
+    monkeypatch.setattr(main.settings,'google_client_id','test-client')
+    email=secrets.token_hex(8)+'@example.com'
+    token=client.post('/api/auth/signup',json={'email':email,'password':'strong-google-test-password'}).json()['token']
+    nonce=client.post('/api/auth/google/challenge').json()['nonce']
+    monkeypatch.setattr(accounts,'verify_google',lambda credential:{'sub':secrets.token_hex(10),'email':email,'nonce':nonce})
+    payload={'credential':'a-test-credential-not-real','nonce':nonce}
+    assert client.post('/api/auth/google',json=payload).status_code==409
+    nonce=client.post('/api/auth/google/challenge').json()['nonce'];payload['nonce']=nonce
+    subject=secrets.token_hex(10)
+    monkeypatch.setattr(accounts,'verify_google',lambda credential:{'sub':subject,'email':email,'nonce':nonce})
+    result=client.post('/api/auth/google/link',headers={'Authorization':'Bearer '+token},json=payload)
+    assert result.status_code==200,result.text
+    assert client.post('/api/auth/google',json=payload).status_code==401
+    nonce=client.post('/api/auth/google/challenge').json()['nonce'];payload['nonce']=nonce
+    assert client.post('/api/auth/google',json=payload).status_code==200
+
+
+def test_google_new_account_private_session_and_wrong_nonce(client,monkeypatch):
+    import secrets
+    from app import accounts
+    monkeypatch.setattr(main.settings,'google_client_id','test-client')
+    nonce=client.post('/api/auth/google/challenge').json()['nonce']
+    claims={'sub':secrets.token_hex(10),'email':secrets.token_hex(8)+'@example.com','nonce':'wrong'}
+    monkeypatch.setattr(accounts,'verify_google',lambda credential:claims)
+    data={'credential':'a-test-credential-not-real','nonce':nonce}
+    assert client.post('/api/auth/google',json=data).status_code==401
+    claims['nonce']=nonce
+    result=client.post('/api/auth/google',json=data)
+    assert result.status_code==200,result.text
+    assert client.get('/api/messages',headers={'Authorization':'Bearer '+result.json()['token']}).json()==[]
+    assert client.post('/api/auth/login',json={'email':claims['email'],'password':'strong-google-test-password'}).status_code==401
+
+
+def test_facebook_page_filter_and_echo(monkeypatch):
+    from app.meta import parse_events
+    monkeypatch.setattr(main.settings,'facebook_page_id','page-123')
+    event={'sender':{'id':'friend'},'message':{'text':'hello','mid':'m123'}}
+    assert parse_events({'object':'page','entry':[{'id':'wrong','messaging':[event]}]})==[]
+    parsed=parse_events({'object':'page','entry':[{'id':'page-123','messaging':[event]}]})
+    assert parsed[0]['platform']=='facebook'
+    event['message']['is_echo']=True
+    assert parse_events({'object':'page','entry':[{'id':'page-123','messaging':[event]}]})==[]
+
+
+def test_snapchat_send_safety_and_dry_run(client,monkeypatch):
+    from app import snapchat
+    calls=[]
+    async def conversation(creator): calls.append('conversation');return {'conversation_id':'id','token':'token'}
+    async def send(conv,message): calls.append('send');return {'accepted':True}
+    monkeypatch.setattr(snapchat,'conversation',conversation);monkeypatch.setattr(snapchat,'send',send)
+    payload={'creator_profile_id':'11111111-1111-1111-1111-111111111111','message':'Collaboration invitation'}
+    assert client.post('/api/snapchat/messages',headers=AUTH,json=payload).status_code==409
+    client.post('/api/bot/start',headers=AUTH)
+    result=client.post('/api/snapchat/messages',headers=AUTH,json=payload)
+    assert result.json()['dry_run'] and not calls
+    preferences=client.get('/api/settings',headers=AUTH).json();preferences['dry_run']=False
+    client.put('/api/settings',headers=AUTH,json=preferences)
+    assert client.post('/api/snapchat/messages',headers=AUTH,json=payload).json()['accepted']
+    assert calls==['conversation','send']
+    client.post('/api/bot/emergency-stop',headers=AUTH)
+    assert client.post('/api/snapchat/messages',headers=AUTH,json=payload).status_code==409
+    assert calls==['conversation','send']
+
+
+def test_snapchat_rejects_partial_success(monkeypatch):
+    import asyncio
+    from app import snapchat
+    from fastapi import HTTPException
+    async def api(*args,**kwargs): return {'request_status':'SUCCESS','group_conversation_messages':[{'sub_request_status':'ERROR'}]}
+    monkeypatch.setattr(snapchat,'api',api)
+    with pytest.raises(HTTPException): asyncio.run(snapchat.send({'conversation_id':'id','token':'token'},'test'))

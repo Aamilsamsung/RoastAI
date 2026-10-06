@@ -9,9 +9,10 @@ from starlette.concurrency import run_in_threadpool
 from .config import settings
 from .models import BotSettings, RoastRequest
 from .ai import generate_with_meaning, provider_error_detail
-from .meta import verify_signature, parse_events, whatsapp_send, instagram_send
+from .meta import verify_signature, parse_events, whatsapp_send, instagram_send, facebook_send
 from . import store
-from . import accounts
+from . import accounts, snapchat
+from uuid import UUID
 
 DEFAULT = {**BotSettings().model_dump(), 'enabled':settings.bot_enabled,'dry_run':settings.dry_run,
     'roast_mode':settings.roast_mode,'intensity':settings.roast_intensity,'profanity_level':settings.profanity_level,
@@ -46,7 +47,7 @@ async def process_job(event):
     if cfg['dry_run']:
         store.log('DRY_RUN',f'{platform} reply generated without delivery')
     else:
-        send=whatsapp_send if platform=='whatsapp' else instagram_send
+        send={'whatsapp':whatsapp_send,'instagram':instagram_send,'facebook':facebook_send}[platform]
         await send(sender,reply)
         store.log('DELIVERY',f'{platform} reply accepted by Meta')
     store.add_message(platform,sender,'RoastAI','','outgoing',reply)
@@ -107,14 +108,14 @@ limits=defaultdict(deque)
 async def protect(request: Request, call_next):
     if request.url.path.startswith('/api/'):
         token=request.headers.get('authorization','').removeprefix('Bearer ')
-        public=request.url.path in ('/api/auth/signup','/api/auth/login')
+        public=request.url.path in ('/api/auth/signup','/api/auth/login','/api/auth/config','/api/auth/google','/api/auth/google/challenge')
         admin=not settings.admin_token or hmac.compare_digest(token.encode(),settings.admin_token.encode())
         user=None if admin or public else await run_in_threadpool(accounts.authenticate,token)
         if not public and not admin and user is None:
             return JSONResponse({'detail':'Sign in required'},status_code=401)
         store.owner.set(user or 0)
-        if user and (request.url.path.startswith('/api/bot/') or request.url.path=='/api/platforms/status'):
-            if request.url.path.startswith('/api/bot/'):
+        if user and (request.url.path.startswith(('/api/bot/','/api/snapchat/')) or request.url.path=='/api/platforms/status'):
+            if request.url.path.startswith(('/api/bot/','/api/snapchat/')):
                 return JSONResponse({'detail':'Social bot controls are owner-only'},status_code=403)
 
         key=request.client.host if request.client else 'unknown'; now=time.monotonic()
@@ -139,6 +140,14 @@ async def protect(request: Request, call_next):
     if request.url.path.startswith('/api/'): response.headers['Cache-Control']='no-store'
     return response
 
+@app.get('/api/auth/config')
+def auth_config(): return {'google_client_id':settings.google_client_id}
+@app.post('/api/auth/google/challenge')
+def google_challenge(): return accounts.google_challenge()
+@app.post('/api/auth/google')
+def google_login(x:accounts.GoogleCredential): return accounts.google_sign_in(x)
+@app.post('/api/auth/google/link')
+def google_link(x:accounts.GoogleCredential): return accounts.google_sign_in(x,store.owner.get())
 @app.post('/api/auth/signup')
 def signup(x:accounts.Credentials): return accounts.sign_in(x,True)
 @app.post('/api/auth/login')
@@ -192,7 +201,7 @@ def roast(x: RoastRequest):
 def activity(): return store.activity()
 @app.get('/api/messages')
 def messages(platform:str='local',sender_id:str='roast-me',before_id:int|None=Query(None,ge=1),limit:int=Query(100,ge=1,le=100)):
-    if platform not in ('local','whatsapp','instagram') or len(sender_id)>200: raise HTTPException(422,'Invalid conversation')
+    if platform not in ('local','whatsapp','instagram','facebook','snapchat') or len(sender_id)>200: raise HTTPException(422,'Invalid conversation')
     return store.conversation_messages(platform,sender_id,limit,before_id)
 @app.get('/api/conversations')
 def conversations(): return store.conversations()
@@ -203,6 +212,7 @@ def clear():
 def platforms():
     return {'gemini':bool(settings.gemini_api_key and settings.gemini_model),'ollama':settings.ai_provider=='ollama' and bool(settings.ollama_base_url),
         'whatsapp':bool(settings.whatsapp_access_token and settings.whatsapp_phone_number_id),'instagram':bool(settings.instagram_access_token and settings.instagram_account_id),
+        'facebook':bool(settings.facebook_page_access_token and settings.facebook_page_id),'snapchat':bool(settings.snapchat_access_token and settings.snapchat_profile_id),'snapchat_capability':'creator_collaboration_approval_required',
         'provider':settings.ai_provider,'status_kind':'configuration'}
 @app.get('/webhook/meta',response_class=PlainTextResponse)
 async def verify(request:Request):
@@ -231,3 +241,28 @@ async def webhook(request:Request):
     return {'accepted':accepted}
 
 app.add_middleware(CORSMiddleware,allow_origins=origins,allow_methods=['GET','POST','PUT','DELETE'],allow_headers=['Content-Type','Authorization'])
+
+@app.get('/api/snapchat/messages')
+async def snapchat_messages(creator_profile_id:UUID):
+    return await snapchat.read(creator_profile_id)
+
+@app.post('/api/snapchat/messages')
+async def snapchat_message(x:snapchat.Collaboration):
+    cfg=current();sender=str(x.creator_profile_id)
+    if cfg['emergency_stop'] or not cfg['enabled']: raise HTTPException(409,'Start the bot and clear emergency stop before social delivery')
+    from datetime import datetime, timezone
+    history=store.recent('snapchat',sender)
+    if history and (datetime.now(timezone.utc)-datetime.fromisoformat(history[-1]['timestamp'])).total_seconds()<cfg['cooldown_seconds']: raise HTTPException(429,'Conversation cooldown active')
+    if cfg['dry_run']:
+        store.log('DRY_RUN','Snapchat collaboration message previewed without sending')
+        return {'accepted':False,'dry_run':True}
+    conv=await snapchat.conversation(x.creator_profile_id)
+    live=current()
+    if not live['enabled'] or live['emergency_stop'] or live['dry_run'] or live['safety_epoch']!=cfg['safety_epoch']: raise HTTPException(409,'Delivery cancelled by changed safety settings')
+    try: result=await snapchat.send(conv,x.message)
+    except HTTPException:
+        store.log('ERROR','Snapchat collaboration send failed or unconfirmed; review conversation before retrying')
+        raise
+    store.add_message('snapchat',sender,'Creator','','outgoing',x.message)
+    store.log('DELIVERY','Snapchat accepted collaboration message')
+    return result

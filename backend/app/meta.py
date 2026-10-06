@@ -24,6 +24,13 @@ def parse_events(payload):
                 t=m.get("message",{}).get("text")
                 if t and not m.get("message",{}).get("is_echo") and m.get("sender",{}).get("id") != settings.instagram_account_id: out.append({"platform":"instagram","sender_id":m.get("sender",{}).get("id",""),
                 "sender_name":"","message_id":m.get("message",{}).get("mid",""),"text":t})
+    elif payload.get('object') == 'page' and settings.facebook_page_id:
+        for entry in payload.get('entry',[]):
+            if str(entry.get('id',''))!=settings.facebook_page_id: continue
+            for event in entry.get('messaging',[]):
+                message=event.get('message',{})
+                if message.get('text') and not message.get('is_echo') and str(event.get('sender',{}).get('id',''))!=settings.facebook_page_id:
+                    out.append({'platform':'facebook','sender_id':event.get('sender',{}).get('id',''),'sender_name':'','message_id':message.get('mid',''),'text':message['text']})
     return out
 
 async def whatsapp_send(recipient,text):
@@ -44,5 +51,13 @@ async def instagram_send(recipient, text):
     if settings.instagram_login_type == 'facebook': payload['messaging_type'] = 'RESPONSE'
     async with httpx.AsyncClient(timeout=20) as client:
         response = await client.post(url, headers={'Authorization': f'Bearer {settings.instagram_access_token}'}, json=payload)
+        response.raise_for_status()
+        return response.json()
+
+
+async def facebook_send(recipient,text):
+    if not settings.facebook_page_access_token or not settings.facebook_page_id: raise RuntimeError('Facebook credentials are not configured')
+    async with httpx.AsyncClient(timeout=20) as client:
+        response=await client.post(f'https://graph.facebook.com/{settings.facebook_api_version}/{settings.facebook_page_id}/messages',headers={'Authorization':'Bearer '+settings.facebook_page_access_token},json={'recipient':{'id':recipient},'messaging_type':'RESPONSE','message':{'text':text}})
         response.raise_for_status()
         return response.json()

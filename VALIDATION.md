@@ -45,3 +45,7 @@ Single-owner access, one backend instance and one uvicorn worker. PostgreSQL adv
 Desktop and mobile browser-check captures are in `docs/previews/`. They show test inputs, not live customer data.
 
 HUB update: the Connecting to HUB startup screen was browser-tested with delayed real API requests; desktop loading preview is in `docs/previews/hub-loading.png`. Production build and TypeScript pass. Deployment still awaits explicit Render workspace selection and an accessible Git source repository.
+
+## Google / Facebook update
+
+25 backend tests pass, including nonce replay rejection, explicit existing-account linking, private Google account history and Facebook page/echo filtering. Frontend production build passes. Live Google and Facebook authentication/delivery require owner credentials and platform permissions; not verified. Snapchat supports only approved manual brand–creator collaboration via the official API; ordinary DMs remain unsupported. Real Snapchat access has not been verified. PostgreSQL integration test remains skipped without TEST_POSTGRES_URL.

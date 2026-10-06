@@ -41,6 +41,10 @@ services:
         value: v23.0
       - key: INSTAGRAM_API_VERSION
         value: v23.0
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: FACEBOOK_API_VERSION
+        value: v23.0
       - key: INSTAGRAM_LOGIN_TYPE
         value: instagram
       - key: FRONTEND_URL
