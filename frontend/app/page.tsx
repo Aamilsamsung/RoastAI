@@ -49,6 +49,8 @@ export default function Home() {
   const [connected,setConnected] = useState(false)
   const [token,setToken] = useState('')
   const [controlsOpen,setControlsOpen] = useState(false)
+  const [menuOpen,setMenuOpen] = useState(false)
+  const menuDialog = useRef<HTMLDialogElement>(null)
   const controlsDialog = useRef<HTMLDialogElement>(null)
   const [authMode,setAuthMode] = useState('login')
   const [email,setEmail] = useState('')
@@ -124,6 +126,17 @@ export default function Home() {
     return()=>{media.removeEventListener('change',closeOnDesktop);dialog.close();document.body.style.overflow=previous}
   },[controlsOpen,tab,authorized])
   useEffect(()=>{setControlsOpen(false)},[tab,authorized])
+  useEffect(()=>{
+    const dialog=menuDialog.current
+    if(!menuOpen||!dialog||!authorized)return
+    const previous=document.body.style.overflow
+    document.body.style.overflow='hidden';dialog.showModal()
+    const media=window.matchMedia('(min-width:721px)')
+    const close=()=>{if(media.matches)setMenuOpen(false)}
+    media.addEventListener('change',close)
+    return()=>{media.removeEventListener('change',close);dialog.close();document.body.style.overflow=previous}
+  },[menuOpen,authorized])
+  useEffect(()=>{setMenuOpen(false)},[tab,authorized])
   const save = () => action(async()=>{
     const value=await request('/api/settings',{method:'PUT',body:JSON.stringify(settings)})
     setSettings(value); setNotice('Preferences saved'); await refresh()
@@ -181,7 +194,7 @@ export default function Home() {
   if(initializing) return <HubLoading/>
   if(!authorized) return <main className="accessScreen"><div className="card accessCard"><div className="brand"><Logo large/><h1>RoastAI</h1></div><h2>{authMode==='signup'?'Create your account':'Welcome to RoastAI'}</h2><p className="muted">Your conversations and preferences stay private to your account.</p><div className="modeScroll">{[['login','Sign in'],['signup','Sign up'],['owner','Owner access']].map(([mode,label])=><button key={mode} className={'mode '+(authMode===mode?'selected':'')} onClick={()=>{setAuthMode(mode);setNotice('')}}>{label}</button>)}</div><form onSubmit={e=>{e.preventDefault();action(async()=>{if(authMode==='owner'){await refresh(true);return}const data=await request('/api/auth/'+(authMode==='signup'?'signup':'login'),{method:'POST',body:JSON.stringify({email,password})});setPassword('');setToken(data.token)})}}>{authMode==='owner'?<label>Workspace access token<input type="password" autoComplete="off" value={token} onChange={e=>setToken(e.target.value)} required/></label>:<><label>Email<input type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} required/></label><label>Password<input type="password" minLength={12} maxLength={128} autoComplete={authMode==='signup'?'new-password':'current-password'} value={password} onChange={e=>setPassword(e.target.value)} required/></label><small className="muted">Use at least 12 characters.</small></>}<button className="primary full" disabled={busy}>{busy?'Connecting to HUB…':authMode==='signup'?'Create account':authMode==='owner'?'Connect':'Sign in'}</button></form>{authMode!=='owner'&&<GoogleSignIn request={request} onSuccess={data=>{setAuthMode('login');setToken(data.token);setPassword('')}} onError={setNotice}/>}{notice&&<p role="alert">{notice}</p>}</div></main>
   return <main>
-    <aside className="sidebar">
+    <aside className="sidebar desktopSidebar">
       <div className="brand"><Logo/><div><b>Roast<span>AI</span></b><small>Gemini roast workspace</small></div></div>
       <button className="newRoast" onClick={()=>{setTab('roast');setMsg('')}}><Icon name="bolt"/> New roast <kbd>⌘ K</kbd></button>
       <nav aria-label="Workspace navigation">{nav.map(([id,label,icon])=><button key={id} className={tab===id?'nav active':'nav'} aria-label={label} aria-current={tab===id?'page':undefined} onClick={()=>{setTab(id);refresh()}}><Icon name={icon}/><span>{label}</span>{id==='activity'&&activities.length>0?<em>{Math.min(activities.length,99)}</em>:null}</button>)}</nav>
@@ -192,6 +205,21 @@ export default function Home() {
       <button className="emergency" disabled={authMode!=='owner'} title={authMode==='owner'?'Stop social delivery':'Social bot controls are owner-only'} onClick={emergency}>Emergency stop</button>
       <button className="ghost" onClick={()=>{request('/api/auth/logout',{method:'POST'}).catch(()=>{});try{sessionStorage.removeItem('roastai-session')}catch{};setToken('');setAuthorized(false);setReply('');setMeaning('');setMessages([]);setConvos([]);setActivities([]);setNotice('Signed out')}}>Sign out</button><div className="privacy">Secure workspace • Keys stay server-side</div>
     </aside>
+    <div className="mobileWorkspaceBar"><button className="secondary" aria-label="Open navigation" aria-haspopup="dialog" aria-expanded={menuOpen} aria-controls="mobile-navigation" onClick={()=>setMenuOpen(true)}>☰ <span>Menu</span></button><div className="mobileBrand"><Logo/><b>RoastAI</b></div></div>
+    <dialog id="mobile-navigation" className="mobileNavigationDrawer" ref={menuDialog} aria-labelledby="mobile-navigation-title" onCancel={()=>setMenuOpen(false)} onClose={()=>setMenuOpen(false)} onClick={e=>{if(e.target===e.currentTarget){const bounds=e.currentTarget.getBoundingClientRect();if(e.clientX<bounds.left||e.clientX>bounds.right||e.clientY<bounds.top||e.clientY>bounds.bottom)setMenuOpen(false)}}}>
+      <div className="drawerHeader"><h2 id="mobile-navigation-title">Workspace</h2><button autoFocus className="secondary" aria-label="Close navigation" onClick={()=>setMenuOpen(false)}>✕</button></div>
+      <aside className="sidebar mobileSidebar">
+      <div className="brand"><Logo/><div><b>Roast<span>AI</span></b><small>Gemini roast workspace</small></div></div>
+      <button className="newRoast" onClick={()=>{setMenuOpen(false);setTab('roast');setMsg('')}}><Icon name="bolt"/> New roast <kbd>⌘ K</kbd></button>
+      <nav aria-label="Workspace navigation">{nav.map(([id,label,icon])=><button key={id} className={tab===id?'nav active':'nav'} aria-label={label} aria-current={tab===id?'page':undefined} onClick={()=>{setMenuOpen(false);setTab(id);refresh()}}><Icon name={icon}/><span>{label}</span>{id==='activity'&&activities.length>0?<em>{Math.min(activities.length,99)}</em>:null}</button>)}</nav>
+      <div className="sideCard">
+        <div className="miniLogo"><Logo/></div><div><strong>{settings.enabled?'Bot is live':'Bot is paused'}</strong><small>{settings.dry_run?'Dry-run mode':'Live delivery'}</small></div>
+        <button aria-label="Toggle bot" aria-pressed={settings.enabled} onClick={toggle} disabled={busy||loading||authMode!=='owner'} title={authMode==='owner'?'Toggle social bot':'Social bot controls are owner-only'} className={settings.enabled?'tinySwitch on':'tinySwitch'}><i/></button>
+      </div>
+      <button className="emergency" disabled={authMode!=='owner'} title={authMode==='owner'?'Stop social delivery':'Social bot controls are owner-only'} onClick={emergency}>Emergency stop</button>
+      <button className="ghost" onClick={()=>{request('/api/auth/logout',{method:'POST'}).catch(()=>{});try{sessionStorage.removeItem('roastai-session')}catch{};setToken('');setAuthorized(false);setReply('');setMeaning('');setMessages([]);setConvos([]);setActivities([]);setNotice('Signed out')}}>Sign out</button><div className="privacy">Secure workspace • Keys stay server-side</div>
+      </aside>
+    </dialog>
 
     <section className="content">
       <header className="topbar">

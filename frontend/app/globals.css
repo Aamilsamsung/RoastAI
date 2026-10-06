@@ -40,3 +40,15 @@ html,body{background:#f6f3ed;color:#211e1a}body{background:radial-gradient(ellip
 .drawerContent .modeScroll{flex-wrap:wrap;overflow:visible}.drawerContent .mode{min-height:40px}
 .drawerContent select,.drawerContent textarea{font-size:16px}.drawerDone{min-height:44px;flex-shrink:0}
 }
+
+.mobileWorkspaceBar,.mobileNavigationDrawer{display:none}
+@media(max-width:720px){
+.desktopSidebar{display:none!important}
+.mobileWorkspaceBar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;background:#25201c;color:#fff;border-bottom:1px solid #564638}
+.mobileWorkspaceBar button{min-height:44px;padding:10px 14px}.mobileBrand{display:flex;align-items:center;gap:8px}
+.mobileNavigationDrawer[open]{display:flex;flex-direction:column;position:fixed;inset:0 auto 0 0;margin:0;width:min(88vw,330px);max-width:100%;height:100dvh;max-height:100dvh;padding:16px;border:0;border-right:1px solid #564638;border-radius:0 20px 20px 0;background:#25201c;color:#fff;box-shadow:16px 0 50px #25201c33}
+.mobileNavigationDrawer::backdrop{background:#18130fc0}.mobileNavigationDrawer .drawerHeader{border-color:#564638}
+.mobileNavigationDrawer .mobileSidebar{position:static;inset:auto;width:100%;padding:16px 0 0;border:0;flex:1;min-height:0;overflow-y:auto;background:transparent;backdrop-filter:none}
+.mobileSidebar nav{display:flex!important;flex-direction:column}.mobileSidebar .nav{justify-content:flex-start;min-height:44px}.mobileSidebar .nav span{display:inline}
+.mobileSidebar .newRoast,.mobileSidebar .sideCard{display:flex}.mobileSidebar .privacy{display:block}.mobileSidebar .sideCard{margin-top:24px}.mobileSidebar .brand{padding:0 0 16px}
+}
