@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import Logo from '../components/Logo'
 import SnapchatCollaboration from '../components/SnapchatCollaboration'
 import GoogleSignIn from '../components/GoogleSignIn'
@@ -48,6 +48,8 @@ export default function Home() {
   const [busy,setBusy] = useState(false)
   const [connected,setConnected] = useState(false)
   const [token,setToken] = useState('')
+  const [controlsOpen,setControlsOpen] = useState(false)
+  const controlsDialog = useRef<HTMLDialogElement>(null)
   const [authMode,setAuthMode] = useState('login')
   const [email,setEmail] = useState('')
   const [password,setPassword] = useState('')
@@ -110,6 +112,18 @@ export default function Home() {
     window.addEventListener('keydown',handler)
     return ()=>window.removeEventListener('keydown',handler)
   },[])
+  useEffect(()=>{
+    const dialog=controlsDialog.current
+    if(!controlsOpen||!dialog||tab!=='roast'||!authorized)return
+    const previous=document.body.style.overflow
+    document.body.style.overflow='hidden'
+    dialog.showModal()
+    const media=window.matchMedia('(min-width:721px)')
+    const closeOnDesktop=()=>{if(media.matches)setControlsOpen(false)}
+    media.addEventListener('change',closeOnDesktop)
+    return()=>{media.removeEventListener('change',closeOnDesktop);dialog.close();document.body.style.overflow=previous}
+  },[controlsOpen,tab,authorized])
+  useEffect(()=>{setControlsOpen(false)},[tab,authorized])
   const save = () => action(async()=>{
     const value=await request('/api/settings',{method:'PUT',body:JSON.stringify(settings)})
     setSettings(value); setNotice('Preferences saved'); await refresh()
@@ -197,20 +211,46 @@ export default function Home() {
           <div className="heroStats"><div><b>1</b><span>Gemini pass</span></div><div><b>12+</b><span>Languages</span></div><div><b>10</b><span>Intensity levels</span></div></div>
         </div>
 
-        <div className="studioGrid">
-          <div className="card composer">
-            <div className="cardHead"><div><span className="kicker">MESSAGE</span><h2>What are you replying to?</h2></div><span className="modePill">{settings.roast_mode}</span></div>
-            <textarea aria-label="Incoming message" maxLength={5000} value={msg} onChange={e=>setMsg(e.target.value)} onKeyDown={e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter') roast()}} placeholder="Paste a message, DM, or sentence…"/>
+        <button className="secondary mobileControlsButton" aria-haspopup="dialog" aria-expanded={controlsOpen} aria-controls="mobile-roast-controls" onClick={()=>setControlsOpen(true)}><Icon name="settings"/> Controls <span>{settings.roast_mode} · {settings.intensity}/10</span></button>
+        <dialog id="mobile-roast-controls" ref={controlsDialog} className="mobileControlsDrawer" aria-labelledby="mobile-controls-title" onCancel={()=>setControlsOpen(false)} onClose={()=>setControlsOpen(false)} onClick={e=>{if(e.target===e.currentTarget){const bounds=e.currentTarget.getBoundingClientRect();if(e.clientX<bounds.left||e.clientX>bounds.right||e.clientY<bounds.top||e.clientY>bounds.bottom)setControlsOpen(false)}}}>
+          <div className="drawerHeader"><div><span className="kicker">ROAST STUDIO</span><h2 id="mobile-controls-title">Your controls</h2></div><button autoFocus className="secondary" aria-label="Close controls" onClick={()=>setControlsOpen(false)}>✕</button></div>
+          <div className="drawerContent">
             <div className="controls3">
               <label>Input language<select value={settings.input_language} onChange={e=>setSettings({...settings,input_language:e.target.value})}>{langs.map(x=><option value={x[0]} key={x[0]}>{x[1]}</option>)}</select></label>
               <label>Reply language<select value={settings.reply_language} onChange={e=>setSettings({...settings,reply_language:e.target.value})}>{langs.slice(1).map(x=><option value={x[0]} key={x[0]}>{x[1]}</option>)}</select></label>
               <label>Script<select value={settings.script_mode} onChange={e=>setSettings({...settings,script_mode:e.target.value})}><option value="roman">Roman / English letters</option><option value="native">Native script</option></select></label>
             </div>
             <div className="modeScroll">{modes.map(m=><button className={settings.roast_mode===m?'mode selected':'mode'} onClick={()=>setSettings({...settings,roast_mode:m})} key={m}>{m}</button>)}</div>
+          <div className="sideStack">
+            <div className="card controlCard">
+              <div className="cardHead"><div><span className="kicker">ROAST ENGINE</span><h3>Personality</h3></div><span className="score">{settings.intensity}/10</span></div>
+              <input className="range" aria-label="Roast intensity" type="range" min="1" max="10" value={settings.intensity} onChange={e=>setSettings({...settings,intensity:+e.target.value})}/>
+              <div className="rangeLabels"><span>Playful</span><span>Ruthless</span></div>
+              <label>Profanity<select value={settings.profanity_level} onChange={e=>setSettings({...settings,profanity_level:e.target.value})}><option value="off">Off</option><option value="light">Light</option><option value="heavy">Heavy</option></select></label>
+              <label>Custom voice<textarea className="smallArea" value={settings.custom_instructions} onChange={e=>setSettings({...settings,custom_instructions:e.target.value})} placeholder="witty, short, Gen-Z, dry…"/></label>
+              <button className="secondary full" onClick={save} disabled={busy||loading}>Save preferences</button>
+            </div>
+            <div className="card quickCard"><span className="kicker">QUICK MODES</span><div className="quickGrid">{[['funny','😂'],['savage','🔥'],['sarcastic','😏'],['intelligent','🧠']].map(([m,emoji])=><button onClick={()=>setSettings({...settings,roast_mode:m})} key={m}><span>{emoji}</span>{m}</button>)}</div></div>
+          </div>
+          </div>
+          <button className="primary full drawerDone" onClick={()=>setControlsOpen(false)}>Done</button>
+        </dialog>
+        <div className="studioGrid">
+          <div className="card composer">
+            <div className="cardHead"><div><span className="kicker">MESSAGE</span><h2>What are you replying to?</h2></div><span className="modePill">{settings.roast_mode}</span></div>
+            <textarea aria-label="Incoming message" maxLength={5000} value={msg} onChange={e=>setMsg(e.target.value)} onKeyDown={e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter') roast()}} placeholder="Paste a message, DM, or sentence…"/>
+            <div className="desktopRoastControls">
+            <div className="controls3">
+              <label>Input language<select value={settings.input_language} onChange={e=>setSettings({...settings,input_language:e.target.value})}>{langs.map(x=><option value={x[0]} key={x[0]}>{x[1]}</option>)}</select></label>
+              <label>Reply language<select value={settings.reply_language} onChange={e=>setSettings({...settings,reply_language:e.target.value})}>{langs.slice(1).map(x=><option value={x[0]} key={x[0]}>{x[1]}</option>)}</select></label>
+              <label>Script<select value={settings.script_mode} onChange={e=>setSettings({...settings,script_mode:e.target.value})}><option value="roman">Roman / English letters</option><option value="native">Native script</option></select></label>
+            </div>
+            <div className="modeScroll">{modes.map(m=><button className={settings.roast_mode===m?'mode selected':'mode'} onClick={()=>setSettings({...settings,roast_mode:m})} key={m}>{m}</button>)}</div>
+            </div>
             <div className="composerFoot"><span className="hint">Ctrl/⌘ + Enter to generate</span><div><button className="ghost" onClick={()=>{setMsg('');setReply('');setMeaning('')}}>Clear</button><button className="primary" onClick={roast} disabled={loading||busy||!msg.trim()||settings.emergency_stop}><Icon name="bolt"/>{loading?'Thinking…':'Generate roast'}</button></div></div>
           </div>
 
-          <div className="sideStack">
+          <div className="sideStack desktopRoastControls">
             <div className="card controlCard">
               <div className="cardHead"><div><span className="kicker">ROAST ENGINE</span><h3>Personality</h3></div><span className="score">{settings.intensity}/10</span></div>
               <input className="range" aria-label="Roast intensity" type="range" min="1" max="10" value={settings.intensity} onChange={e=>setSettings({...settings,intensity:+e.target.value})}/>
