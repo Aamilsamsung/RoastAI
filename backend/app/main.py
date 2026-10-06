@@ -182,7 +182,9 @@ def emergency():
 @app.post('/api/roast')
 @app.post('/api/preview')
 def roast(x: RoastRequest):
+    started=time.perf_counter()
     cfg=current()
+    ai_started=time.perf_counter()
     if cfg['emergency_stop']: raise HTTPException(409,'Emergency stop is active. Start the bot to reset it.')
     try:
         reply,meaning=generate_with_meaning(x.message,SimpleNamespace(**cfg),x.sender_name,store.recent('local','roast-me'),x.input_language,x.reply_language,x.script_mode)
@@ -192,11 +194,15 @@ def roast(x: RoastRequest):
         import logging
         logging.getLogger('uvicorn.error').warning('AI generation failure type=%s detail=%s',type(error).__name__,detail)
         raise HTTPException(502,detail)
+    ai_ms=round((time.perf_counter()-ai_started)*1000)
     if current()['safety_epoch']!=cfg['safety_epoch']: raise HTTPException(409,'Generation cancelled because bot settings changed.')
     store.add_message('local','roast-me','You','','incoming',x.message)
     store.add_message('local','roast-me','RoastAI','','outgoing',reply)
     store.log('ROAST',f"Generated {cfg['roast_mode']} comeback")
-    return {'reply':reply,'english_meaning':meaning,'mode':cfg['roast_mode'],'intensity':cfg['intensity'],'input_language':x.input_language,'reply_language':x.reply_language,'script_mode':x.script_mode}
+    total_ms=round((time.perf_counter()-started)*1000)
+    import logging
+    logging.getLogger('uvicorn.error').info('Roast timing ai_ms=%d total_ms=%d',ai_ms,total_ms)
+    return {'timing':{'ai_ms':ai_ms,'total_ms':total_ms},'reply':reply,'english_meaning':meaning,'mode':cfg['roast_mode'],'intensity':cfg['intensity'],'input_language':x.input_language,'reply_language':x.reply_language,'script_mode':x.script_mode}
 @app.get('/api/activity')
 def activity(): return store.activity()
 @app.get('/api/messages')

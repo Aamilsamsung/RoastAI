@@ -126,18 +126,18 @@ export default function Home() {
   }
   const roast = async() => {
     if(!msg.trim() || loading || busy) return
-    setLoading(true); setReply(''); setMeaning(''); setNotice('')
+    setBusy(true); setLoading(true); setReply(''); setMeaning(''); setNotice('')
     try {
       // Studio controls apply to this request even before an explicit Save.
       const saved=await request('/api/settings',{method:'PUT',body:JSON.stringify(settings)})
       setSettings(saved)
       const d=await request('/api/roast',{method:'POST',body:JSON.stringify({message:msg,input_language:settings.input_language,reply_language:settings.reply_language,script_mode:settings.script_mode})})
-      setReply(d.reply); setMeaning(d.english_meaning); setResultMeta(d); setNotice('Reply and English meaning generated')
+      setReply(d.reply); setMeaning(d.english_meaning); setResultMeta(d); setNotice('Reply and English meaning generated'); setLoading(false)
       const latest=await request('/api/messages?platform=local&sender_id=roast-me')
       setMessages(latest);setHasOlder(latest.length===100);setSelectedThread({platform:'local',sender_id:'roast-me'})
       setThread('Local Roast Studio'); await refresh()
     } catch(e:any) { setNotice(e.message) }
-    finally { setLoading(false) }
+    finally { setLoading(false); setBusy(false) }
   }
   const clearHistory = () => action(async()=>{
     if(!window.confirm('Delete all conversation messages? Activity and delivery records are retained.')) return
