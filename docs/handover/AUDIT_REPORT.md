@@ -4,7 +4,7 @@ This report concerns the actual Aamilsamsung/RoastAI source and the frontend/bac
 
 ## Root causes and corrections
 
-1. The two audit failures were ServerError events. A new authenticated QA request reproduced HTTP 502 after 14.957 seconds. Enhanced safe diagnostics proved Gemini 3.8 Flash returned HTTP 503 on both bounded attempts. The same backend credentials succeeded on Gemini 3.5 Flash-Lite, proving the tested generation failure was model-specific upstream unavailability, not a missing key or the application's reply parser. This does not establish the cause of Google's capacity decision or guarantee future uptime.
+1. The two audit failures were ServerError events. A new authenticated QA request reproduced HTTP 502 after 14.957 seconds. Enhanced safe diagnostics proved Gemini 3.8 Flash returned HTTP 503 on both bounded attempts. The same backend credentials succeeded on Gemini 3.5 Flash-Lite, proving the tested generation failure was model-specific upstream unavailability, not a missing key or the application's reply parser. This does not establish the underlying Google infrastructure or project-specific cause or guarantee future uptime.
 2. The SDK's default retry policy could include nested retries. Retry attempts are now explicitly controlled: normally one generation returning reply and English meaning, at most two attempts for transient failures. Invalid-key, permission, unavailable-model and quota errors are surfaced without blind retries. Request IDs, durations, model, attempts and SDK token counters are recorded without secrets/raw upstream error strings.
 3. Credential presence was conflated with health, and Bot ON was described as live. Provider status now reflects a recent successful/unavailable/quota-limited/setup-error observation, expiring after ten minutes. Bot enabled, dry-run enforcement and configuration are separate concepts.
 4. New roast formerly reused one `roast-me` thread. New conversations have separate IDs; existing history remains readable. Message pair, activity and idempotent result are stored atomically. A replay returns the durable result; simultaneous duplicate submissions start only one generation.
@@ -43,7 +43,7 @@ The final browser suite also verified a dropped-response retry, malformed-respon
 
 ## Measured results and costs
 
-Local backend: 88 passed, one real PostgreSQL integration test skipped locally. Real PostgreSQL integration passed in GitHub CI (1 passed); CI also passed frontend build/typecheck/audit and backend suite for the tested release. Final handover CI must be checked against its committed SHA.
+Local backend: 88 passed, one real PostgreSQL integration test skipped locally. Real PostgreSQL integration passed in GitHub CI (1 passed); CI also passed frontend build/typecheck/audit and backend suite for the tested release. Release 3f6ade2aa3be97bc90ed1b2efbd435b03576921d passed all three GitHub CI jobs (run 38267616211). Both Render services were verified live on that release; production /health and authenticated platform status returned HTTP 200 with PostgreSQL and live delivery disabled. Provider health correctly returns not_tested when the last observation has expired.
 
 The initial 46-case repaired smoke run had median AI-stage 1.189 seconds; range 0.878–4.372 seconds. Test-client wall median 1.586 seconds, range 1.314–15.469 seconds; fresh urllib connections had large transport overhead, while pooled-client observations were normally near 1.6 seconds. These are test-environment observations, not a user-facing SLA.
 

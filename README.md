@@ -4,7 +4,7 @@ Existing Next.js/TypeScript v2 purple workspace and FastAPI backend, with Gemini
 
 ## Architecture and operating scope
 
-Two public Render web services plus private Render PostgreSQL. The frontend browser calls the backend origin through `NEXT_PUBLIC_API_URL`; Gemini and Meta credentials exist only in the backend environment. An owner enters the separately generated `ADMIN_TOKEN` into the workspace login; it is retained in sessionStorage for the current browser tab, is sent as a Bearer credential over HTTPS, and is cleared on sign-out or reload. Never distribute it to untrusted users. Owner access uses ADMIN_TOKEN; friends use email/password accounts with isolated Studio conversations, activity and preferences. Social integrations remain exclusively in the owner workspace. Changing the token in Render revokes existing access.
+Two public Render web services plus private Render PostgreSQL. The frontend browser calls the backend origin through `NEXT_PUBLIC_API_URL`; Gemini and Meta credentials exist only in the backend environment. An owner enters the separately generated `ADMIN_TOKEN` into the workspace login; it is retained in sessionStorage for the current browser tab, is sent as a Bearer credential over HTTPS, and is cleared on sign-out or when the tab is closed; refreshing restores the current tab session. Never distribute it to untrusted users. Owner access uses ADMIN_TOKEN; friends use email/password accounts with isolated Studio conversations, activity and preferences. Social integrations remain exclusively in the owner workspace. Changing the token in Render revokes existing access.
 
 The existing Studio, Conversations, Activity, Platforms and Settings remain. Studio changes save before generation so modes, intensity, voice, profanity and language controls apply immediately. Manual Studio generation works with Bot OFF for testing; emergency stop blocks it. Bot ON/OFF controls automatic social replies. Explicit Start resets emergency stop. Save cannot turn a paused bot back on.
 
@@ -239,7 +239,7 @@ Supply Gemini/Meta credentials, supported model access, account permissions, app
 
 ## PostgreSQL integration check
 
-GitHub Actions includes a separate PostgreSQL 16 service and a real database integration job. It checks migrations, original SQLite import, repaired sequences, saved settings, concurrent preference updates, webhook deduplication and restart handling. The CI password is disposable test configuration, not a production credential. This workflow has not been executed on your GitHub account yet.
+GitHub Actions includes a separate PostgreSQL 16 service and a real database integration job. It checks migrations, original SQLite import, repaired sequences, saved settings, concurrent preference updates, webhook deduplication and restart handling. The CI password is disposable test configuration, not a production credential. The workflow passed on GitHub for release 3f6ade2aa3be97bc90ed1b2efbd435b03576921d (run 38267616211), including the real PostgreSQL job.
 
 To run it locally against a disposable PostgreSQL database, set `TEST_POSTGRES_URL` and run `python -m pytest tests/test_postgres.py -q` from backend. The test creates a randomly named isolated schema, sets its connection search_path exclusively to that schema, and drops that same schema afterward. Use a test database with schema-creation permissions. Without TEST_POSTGRES_URL, it is explicitly skipped; a skipped test is not proof of PostgreSQL runtime validation.
 
