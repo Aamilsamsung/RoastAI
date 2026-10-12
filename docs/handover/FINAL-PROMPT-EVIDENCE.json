@@ -1,0 +1,512 @@
+{
+  "prompt": "You are late to the meeting again.",
+  "results": [
+    {
+      "case": "mode-normal",
+      "http": 200,
+      "wall_seconds": 2.917,
+      "settings": {
+        "roast_mode": "normal",
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "34f5e38f-ed68-4705-beaf-16e8db42aef7",
+        "conversation_id": "qa-4c43ebf471eb475b864803adeab421e5",
+        "timing": {
+          "ai_ms": 2366,
+          "total_ms": 2470
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 287,
+          "output_tokens": 38,
+          "thinking_tokens": null,
+          "total_tokens": 325,
+          "uncertain_attempts": 0,
+          "latency_ms": 2351
+        },
+        "reply": "Time just genuinely enjoys my company way too much to let me leave early.",
+        "english_meaning": "I am always late because I linger, not because I don't care.",
+        "mode": "normal",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "english",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "mode-funny",
+      "http": 200,
+      "wall_seconds": 1.309,
+      "settings": {
+        "roast_mode": "funny",
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "04e8e6db-e125-4a15-bcbd-86ec69151f5a",
+        "conversation_id": "qa-d31c52457ce5419d98e6aba0eed05d13",
+        "timing": {
+          "ai_ms": 1016,
+          "total_ms": 1026
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 289,
+          "output_tokens": 38,
+          "thinking_tokens": null,
+          "total_tokens": 327,
+          "uncertain_attempts": 0,
+          "latency_ms": 1007
+        },
+        "reply": "I'm not late, I'm just making a grand entrance worthy of my schedule.",
+        "english_meaning": "I arrive intentionally late because my time is valuable and dramatic.",
+        "mode": "funny",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "english",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "mode-sarcastic",
+      "http": 200,
+      "wall_seconds": 1.587,
+      "settings": {
+        "roast_mode": "sarcastic",
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "f267cbf3-a24e-4b1d-931a-42aa3eeaaa69",
+        "conversation_id": "qa-7b32860f55a8485a850a4e3c2b8fb344",
+        "timing": {
+          "ai_ms": 1212,
+          "total_ms": 1221
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 287,
+          "output_tokens": 35,
+          "thinking_tokens": null,
+          "total_tokens": 322,
+          "uncertain_attempts": 0,
+          "latency_ms": 1203
+        },
+        "reply": "I like to make an entrance, not just show up.",
+        "english_meaning": "I arrive late on purpose to create a dramatic effect rather than just being punctual.",
+        "mode": "sarcastic",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "english",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "mode-savage",
+      "http": 200,
+      "wall_seconds": 1.319,
+      "settings": {
+        "roast_mode": "savage",
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "9d7f8451-4a1e-476f-aa66-272b4cd84fbc",
+        "conversation_id": "qa-4d3f436cc3d942eeaa3e991e01e923a7",
+        "timing": {
+          "ai_ms": 876,
+          "total_ms": 892
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 288,
+          "output_tokens": 34,
+          "thinking_tokens": null,
+          "total_tokens": 322,
+          "uncertain_attempts": 0,
+          "latency_ms": 867
+        },
+        "reply": "Traffic tried its best, but unfortunately, I survived.",
+        "english_meaning": "I was caught in bad traffic, but I managed to make it here anyway.",
+        "mode": "savage",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "english",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "mode-brutal",
+      "http": 200,
+      "wall_seconds": 1.355,
+      "settings": {
+        "roast_mode": "brutal",
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "34d34e95-bd00-481b-b73f-ec877a40081a",
+        "conversation_id": "qa-51559c11cd9c4ea4b75391b8e670cf67",
+        "timing": {
+          "ai_ms": 1061,
+          "total_ms": 1074
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 289,
+          "output_tokens": 36,
+          "thinking_tokens": null,
+          "total_tokens": 325,
+          "uncertain_attempts": 0,
+          "latency_ms": 1049
+        },
+        "reply": "Traffic tried to hold me back, but my dedication was too stubborn for it.",
+        "english_meaning": "I was delayed by traffic, but I made it here anyway.",
+        "mode": "brutal",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "english",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "mode-deadpan",
+      "http": 200,
+      "wall_seconds": 1.418,
+      "settings": {
+        "roast_mode": "deadpan",
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "cf7b30ff-b3b2-445b-a674-4188b0480681",
+        "conversation_id": "qa-03198593106c4e46b1d8a35b3222b782",
+        "timing": {
+          "ai_ms": 995,
+          "total_ms": 1003
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 287,
+          "output_tokens": 36,
+          "thinking_tokens": null,
+          "total_tokens": 323,
+          "uncertain_attempts": 0,
+          "latency_ms": 988
+        },
+        "reply": "Traffic tried, but my enthusiasm simply refused to accelerate.",
+        "english_meaning": "I was delayed because I simply couldn't muster up any excitement to arrive on time.",
+        "mode": "deadpan",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "english",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "mode-intelligent",
+      "http": 200,
+      "wall_seconds": 1.468,
+      "settings": {
+        "roast_mode": "intelligent",
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "b53888a4-b713-40be-a02d-fead34aeb9ed",
+        "conversation_id": "qa-32943dfcc75d46788ebb8fc810829490",
+        "timing": {
+          "ai_ms": 1019,
+          "total_ms": 1028
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 288,
+          "output_tokens": 44,
+          "thinking_tokens": null,
+          "total_tokens": 332,
+          "uncertain_attempts": 0,
+          "latency_ms": 1006
+        },
+        "reply": "Punctuality and I are currently seeing other people, but we're trying to work it out.",
+        "english_meaning": "I struggle with being on time, but I am making an effort to improve.",
+        "mode": "intelligent",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "english",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "mode-respectful",
+      "http": 200,
+      "wall_seconds": 1.714,
+      "settings": {
+        "roast_mode": "respectful",
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "6193b421-093f-4f14-967e-c9566adf0761",
+        "conversation_id": "qa-fde6a525292649cda2aa4528b1659e38",
+        "timing": {
+          "ai_ms": 1273,
+          "total_ms": 1290
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 291,
+          "output_tokens": 42,
+          "thinking_tokens": null,
+          "total_tokens": 333,
+          "uncertain_attempts": 0,
+          "latency_ms": 1265
+        },
+        "reply": "Punctuality is just a suggestion when your calendar looks like a Jackson Pollock painting.",
+        "english_meaning": "My schedule is too chaotic to be on time everywhere, but the work still gets done.",
+        "mode": "respectful",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "english",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "mode-vulgar",
+      "http": 200,
+      "wall_seconds": 1.484,
+      "settings": {
+        "roast_mode": "vulgar",
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "8515e20a-5e9e-49cd-8218-22fe781e7b71",
+        "conversation_id": "qa-48e0d7af8b3f4c6b85b84b7bc8f6b4fd",
+        "timing": {
+          "ai_ms": 988,
+          "total_ms": 1066
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 291,
+          "output_tokens": 34,
+          "thinking_tokens": null,
+          "total_tokens": 325,
+          "uncertain_attempts": 0,
+          "latency_ms": 978
+        },
+        "reply": "Traffic tried its best, but unfortunately, I survived.",
+        "english_meaning": "I faced a tough commute, but I still made it here despite the delay.",
+        "mode": "vulgar",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "english",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "intensity-1",
+      "http": 200,
+      "wall_seconds": 1.823,
+      "settings": {
+        "intensity": 1,
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "f08ef5ad-4073-4b0b-b5c6-fda48126cd48",
+        "conversation_id": "qa-a1dcd7c677b8424ea830bfe6765cdd5b",
+        "timing": {
+          "ai_ms": 1386,
+          "total_ms": 1399
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 293,
+          "output_tokens": 31,
+          "thinking_tokens": null,
+          "total_tokens": 324,
+          "uncertain_attempts": 0,
+          "latency_ms": 1379
+        },
+        "reply": "Time just genuinely respects my schedule more than the agenda.",
+        "english_meaning": "I arrive when I arrive, not when the clock says so.",
+        "mode": "savage",
+        "intensity": 1,
+        "input_language": "english",
+        "reply_language": "english",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "intensity-10",
+      "http": 200,
+      "wall_seconds": 1.562,
+      "settings": {
+        "intensity": 10,
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "74fe8762-6240-4c8f-8620-ae7f9d2ae18e",
+        "conversation_id": "qa-5083c93dfdf048b9a0f4c274e8277b9c",
+        "timing": {
+          "ai_ms": 1128,
+          "total_ms": 1136
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 297,
+          "output_tokens": 38,
+          "thinking_tokens": null,
+          "total_tokens": 335,
+          "uncertain_attempts": 0,
+          "latency_ms": 1074
+        },
+        "reply": "Punctuality is just a suggestion when you are this hard to look at.",
+        "english_meaning": "I showed up late because looking at you isn't worth rushing for.",
+        "mode": "savage",
+        "intensity": 10,
+        "input_language": "english",
+        "reply_language": "english",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "custom-voice",
+      "http": 200,
+      "wall_seconds": 1.387,
+      "settings": {
+        "custom_instructions": "Speak like a dry librarian. Mention books or overdue returns.",
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "5b3c24af-ded0-4804-8e29-35ea9270fc23",
+        "conversation_id": "qa-e6f7b03eca714a74939df9ac2faeac7d",
+        "timing": {
+          "ai_ms": 1104,
+          "total_ms": 1112
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 298,
+          "output_tokens": 52,
+          "thinking_tokens": null,
+          "total_tokens": 350,
+          "uncertain_attempts": 0,
+          "latency_ms": 1032
+        },
+        "reply": "Punctuality is merely a poorly filed chapter, and my overdue fine for this delay is already accruing a rather fascinating amount of interest.",
+        "english_meaning": "I am late, but my disregard for time is practically a historical archive at this point.",
+        "mode": "savage",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "english",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true,
+        "voice_cue_present": true
+      },
+      "status": "PASS"
+    }
+  ],
+  "initial_rate_limit_evidence": [],
+  "note": "Smoke samples, not statistical proof or native-speaker semantic review"
+}

@@ -13,6 +13,8 @@ from .meta import verify_signature, parse_events, whatsapp_send, instagram_send,
 from . import store
 from . import accounts, snapchat
 from uuid import UUID
+from .observability import AccessLogPrivacyFilter
+logging.getLogger('uvicorn.access').addFilter(AccessLogPrivacyFilter())
 
 DEFAULT = {**BotSettings().model_dump(), 'enabled':settings.bot_enabled,'dry_run':settings.dry_run,
     'roast_mode':settings.roast_mode,'intensity':settings.roast_intensity,'profanity_level':settings.profanity_level,
@@ -240,7 +242,7 @@ def platforms():
     return {'gemini':bool(settings.gemini_api_key and settings.gemini_model),'ollama':settings.ai_provider=='ollama' and bool(settings.ollama_base_url),
         'whatsapp':bool(settings.whatsapp_access_token and settings.whatsapp_phone_number_id),'instagram':bool(settings.instagram_access_token and settings.instagram_account_id),
         'facebook':bool(settings.facebook_page_access_token and settings.facebook_page_id),'snapchat':bool(settings.snapchat_access_token and settings.snapchat_profile_id),'snapchat_capability':'creator_collaboration_approval_required',
-        'provider':settings.ai_provider,'provider_health':store.provider_status(),'delivery_approved':settings.social_delivery_approved,'status_kind':'configuration_only_not_connection_verified'}
+        'environment':settings.environment,'database_backend':store.engine.dialect.name,'provider':settings.ai_provider,'provider_health':store.provider_status(),'delivery_approved':settings.social_delivery_approved,'status_kind':'configuration_only_not_connection_verified'}
 @app.get('/webhook/meta',response_class=PlainTextResponse)
 async def verify(request:Request):
     q=request.query_params
@@ -267,7 +269,7 @@ async def webhook(request:Request):
         if not store.processed(event['message_id']) and store.enqueue(event): accepted+=1
     return {'accepted':accepted}
 
-app.add_middleware(CORSMiddleware,allow_origins=origins,allow_methods=['GET','POST','PUT','DELETE'],allow_headers=['Content-Type','Authorization'])
+app.add_middleware(CORSMiddleware,allow_origins=origins,allow_methods=['GET','POST','PUT','DELETE'],allow_headers=['Content-Type','Authorization'],expose_headers=['X-Request-ID','Retry-After'])
 
 @app.get('/api/snapchat/messages')
 async def snapchat_messages(creator_profile_id:UUID):

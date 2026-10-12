@@ -485,3 +485,43 @@ def test_model_specific_thinking(model,level,monkeypatch):
             return SimpleNamespace(text='REPLY: safe\nMEANING: safe')
     monkeypatch.setattr(ai.genai,'Client',Client);monkeypatch.setattr(settings,'gemini_model',model);monkeypatch.setattr(settings,'gemini_api_key','test-key')
     ai._gemini('safe')
+
+
+def test_concurrent_duplicate_starts_only_one_generation(client,monkeypatch):
+    import uuid,threading
+    from concurrent.futures import ThreadPoolExecutor
+    entered=threading.Event();release=threading.Event();calls=[]
+    def slow(*args):
+        calls.append(1);entered.set();assert release.wait(5);return 'single reply','meaning'
+    monkeypatch.setattr(main,'generate_with_meaning',slow)
+    payload={'message':'safe simultaneous request','request_id':str(uuid.uuid4())}
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        first=pool.submit(client.post,'/api/roast',headers=AUTH,json=payload)
+        try:
+            assert entered.wait(3)
+            second=client.post('/api/roast',headers=AUTH,json=payload)
+            assert second.status_code==409 and len(calls)==1
+        finally:release.set()
+        assert first.result(timeout=5).status_code==200
+    assert len(client.get('/api/messages',headers=AUTH).json())==2
+
+
+@pytest.mark.parametrize('change',[{'aud':'attacker-client'},{'iss':'https://attacker.example'},{'email_verified':False},{'sub':''}])
+def test_google_claim_validation(change,monkeypatch):
+    from app import accounts
+    from google.oauth2 import id_token
+    from fastapi import HTTPException
+    monkeypatch.setattr(settings,'google_client_id','our-client')
+    claims={'aud':'our-client','iss':'https://accounts.google.com','email_verified':True,'sub':'subject','email':'qa@example.com',**change}
+    monkeypatch.setattr(id_token,'verify_oauth2_token',lambda *args:claims)
+    with pytest.raises(HTTPException) as error:accounts.verify_google('test-credential')
+    assert error.value.status_code==401
+
+
+def test_access_logs_redact_webhook_verification_and_private_queries():
+    import logging
+    from app.observability import AccessLogPrivacyFilter
+    record=logging.LogRecord('uvicorn.access',logging.INFO,'',0,'%s - "%s %s HTTP/%s" %d',('127.0.0.1','GET','/webhook/meta?hub.verify_token=private-verify-token&hub.challenge=123','1.1',200),None)
+    AccessLogPrivacyFilter().filter(record)
+    assert 'private-verify-token' not in record.getMessage() and 'hub.challenge' not in record.getMessage()
+    assert '/webhook/meta' in record.getMessage() and '200' in record.getMessage()

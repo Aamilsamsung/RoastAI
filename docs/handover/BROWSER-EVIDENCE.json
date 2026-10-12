@@ -3,6 +3,11 @@
     "desktop navigation visible",
     "successful UI workflow using labelled test provider",
     "unchanged Studio settings skip redundant save request",
+    "copy response succeeded through actual clipboard API or selection fallback",
+    "lost response retry reuses request ID",
+    "lost response retry adds only one message pair",
+    "malformed success response does not fabricate a result",
+    "malformed response retry keeps original request ID",
     "two separate conversations created",
     "conversation reopened with messages",
     "session persists after refresh",
@@ -28,7 +33,13 @@
     "drawer preserves language 720",
     "drawer preserves voice 720",
     "focus stays in controls 720",
-    "desktop layout restored after resize"
+    "drawer saves preferences to backend",
+    "desktop layout restored after resize",
+    "saved language survives full refresh",
+    "saved custom voice survives full refresh",
+    "late-response test reached backend",
+    "old account response cannot appear in new account",
+    "sign out clears private draft before next account"
   ],
   "provider": "local labelled test double, not live Gemini"
 }

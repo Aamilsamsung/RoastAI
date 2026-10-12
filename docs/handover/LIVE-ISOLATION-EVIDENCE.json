@@ -9,6 +9,7 @@
     "friend cannot start social bot",
     "friend cannot access owner Snapchat API",
     "B has independent default preferences",
+    "B does not receive A private custom voice",
     "logout accepted",
     "logout revokes bearer server-side"
   ],

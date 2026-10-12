@@ -17,3 +17,7 @@ Illustration only: 10,000 successful requests at 500 input tokens and 300 output
 ## Measured minimal-thinking smoke run
 
 46 successful safe-prompt cases recorded mean input 211.33 tokens and mean total 256.54 tokens. Returned billable output inferred from total minus input averaged 45.22 tokens; SDK thoughts_token_count was absent, not invented as zero. At $0.30/$2.50 per million tokens, paid-equivalent cost is approximately $0.00017644 per successful request, or $1.76 per 10,000 requests with identical average usage. This uses short, fresh conversations; real long histories/custom voice raise input usage. Initial faster/failed quota tests are retained separately. Prompt calibration changed afterward and needs final measurements. Free-tier eligibility and billing remain project-dependent.
+
+## Final calibrated prompt measurement
+
+12 production cases after calibration passed: nine modes, intensity endpoints and custom voice. Mean input 290.42 tokens; billable output inferred from total minus input 38.17 tokens. Median AI stage 1.083 seconds; pooled-client median end-to-end 1.476 seconds (range 1.309–2.917). Paid-equivalent $0.00018254 per request, or approximately $1.83 per 10,000 identical-usage successful requests. This excludes failed/ambiguous attempts, longer histories, hosting, tax and integration costs. It is not a monthly bill or an uptime/latency guarantee. See FINAL-LATENCY-COST.json.
