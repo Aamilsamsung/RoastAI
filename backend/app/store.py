@@ -86,3 +86,31 @@ def update_preferences(default, changes, protect_stop=False):
             return value
         except BaseException:
             c.rollback(); raise
+
+
+def record_provider(data):
+    execute('INSERT INTO provider_state(provider,data) VALUES(:p,:d) ON CONFLICT(provider) DO UPDATE SET data=excluded.data',p=settings.ai_provider,d=json.dumps(data))
+
+def provider_status():
+    import time
+    rows=query('SELECT data FROM provider_state WHERE provider=:p',p=settings.ai_provider)
+    value=json.loads(rows[0]['data']) if rows else {'status':'not_tested'}
+    model=settings.gemini_model if settings.ai_provider=='gemini' else settings.ollama_model
+    if value.get('model')!=model or time.time()-value.get('checked_at',0)>600: return {'status':'not_tested','model':model}
+    return value
+
+def claim_request(request_id,fingerprint):
+    import time
+    with engine.begin() as c:
+        inserted=c.execute(text("INSERT INTO generation_requests(owner_id,request_id,fingerprint,status,created_at) VALUES(:o,:r,:f,'processing',:t) ON CONFLICT(owner_id,request_id) DO NOTHING"),{'o':owner.get(),'r':request_id,'f':fingerprint,'t':time.time()})
+        if inserted.rowcount==1:return None
+        return dict(c.execute(text('SELECT * FROM generation_requests WHERE owner_id=:o AND request_id=:r'),{'o':owner.get(),'r':request_id}).mappings().one())
+
+def finish_request(request_id,response,message=None,reply=None,conversation_id='roast-me'):
+    # Conversation pair, activity and idempotent result commit together.
+    with engine.begin() as c:
+        if message is not None:
+            for direction,value,name in [('incoming',message,'You'),('outgoing',reply,'RoastAI')]:
+                c.execute(messages.insert().values(owner_id=owner.get(),platform='local',sender_id=conversation_id,sender_name=name,message_id=request_id,direction=direction,text=value,timestamp=now()))
+            c.execute(logs.insert().values(owner_id=owner.get(),category='ROAST',message='Generated comeback · request '+request_id,timestamp=now()))
+        c.execute(text('UPDATE generation_requests SET status=:s,response=:d WHERE owner_id=:o AND request_id=:r'),{'s':'done' if message is not None else 'failed','d':json.dumps(response),'o':owner.get(),'r':request_id})

@@ -35,6 +35,12 @@ services:
         value: gemini
       - key: AI_TIMEOUT_SECONDS
         value: "30"
+      - key: AI_ATTEMPT_TIMEOUT_SECONDS
+        value: "12"
+      - key: AI_MAX_ATTEMPTS
+        value: "2"
+      - key: SOCIAL_DELIVERY_APPROVED
+        value: "false"
       - key: RATE_LIMIT_PER_MINUTE
         value: "20"
       - key: WHATSAPP_API_VERSION

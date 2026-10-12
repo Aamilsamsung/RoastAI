@@ -12,14 +12,14 @@ def parse_events(payload):
         for e in payload.get("entry",[]):
             for c in e.get("changes",[]):
                 phone=c.get("value",{}).get("metadata",{}).get("phone_number_id")
-                if phone and settings.whatsapp_phone_number_id and phone != settings.whatsapp_phone_number_id: continue
+                if not settings.whatsapp_phone_number_id or phone != settings.whatsapp_phone_number_id: continue
                 for m in c.get("value",{}).get("messages",[]):
                     if m.get("type")=="text":
                         out.append({"platform":"whatsapp","sender_id":m.get("from",""),"sender_name":"",
                         "message_id":m.get("id",""),"text":m.get("text",{}).get("body","")})
     elif payload.get("object") == "instagram":
         for e in payload.get("entry",[]):
-            if e.get("id") and settings.instagram_account_id and e["id"] != settings.instagram_account_id: continue
+            if not settings.instagram_account_id or e.get("id") != settings.instagram_account_id: continue
             for m in e.get("messaging",[]):
                 t=m.get("message",{}).get("text")
                 if t and not m.get("message",{}).get("is_echo") and m.get("sender",{}).get("id") != settings.instagram_account_id: out.append({"platform":"instagram","sender_id":m.get("sender",{}).get("id",""),

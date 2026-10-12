@@ -1,4 +1,7 @@
 import json
+import time, random, logging
+from contextvars import ContextVar
+provider_trace = ContextVar("provider_trace",default=None)
 import urllib.request
 from google import genai
 from .config import settings
@@ -60,6 +63,7 @@ def _prompt(message, cfg, sender_name, context, input_language, reply_language, 
 Style: {MODES[cfg.roast_mode]}. Intensity: {cfg.intensity}/10. Profanity: {profanity}.
 Reply language: {target}. Script: {script}. Input language: {input_language}.
 Custom personality: {cfg.custom_instructions or "none"}.
+Profanity setting overrides mode and custom voice: when off, do not swear even in vulgar mode.
 Keep the comeback natural and conversational, normally 1-2 sentences, under {cfg.max_reply_length} characters.
 
 Return EXACTLY two lines:
@@ -76,17 +80,41 @@ Message: {message}"""
 def _gemini(prompt):
     if not settings.gemini_api_key:
         raise ProviderConfigurationError("Missing backend Gemini key")
+    import httpx
     from google.genai import types
-    with genai.Client(api_key=settings.gemini_api_key, http_options=types.HttpOptions(timeout=settings.ai_timeout_seconds * 1000)) as client:
-        thinking = (types.ThinkingConfig(thinking_budget=0) if settings.gemini_model.startswith("gemini-2.5")
-                    else types.ThinkingConfig(thinking_level="low"))
-        response = client.models.generate_content(
-            model=settings.gemini_model, contents=prompt,
-            config=types.GenerateContentConfig(thinking_config=thinking, max_output_tokens=1536, temperature=0.8),
-        )
-        result = (response.text or "").strip()
-        if not result: raise ProviderResponseError("Gemini returned no reply; the output may have been blocked or exhausted its token budget. Try a different message.")
-        return result
+    from google.genai.errors import APIError
+    started=time.perf_counter(); deadline=started+settings.ai_timeout_seconds
+    trace={'provider':'gemini','model':settings.gemini_model,'attempts':0,'input_tokens':None,'output_tokens':None,'thinking_tokens':None,'total_tokens':None}
+    provider_trace.set(trace)
+    thinking=(types.ThinkingConfig(thinking_budget=0) if settings.gemini_model.startswith('gemini-2.5')
+              else types.ThinkingConfig(thinking_level='low') if settings.gemini_model.startswith('gemini-3') else None)
+    for attempt in range(settings.ai_max_attempts):
+        remaining=deadline-time.perf_counter()
+        if remaining<=0: raise TimeoutError('AI request deadline exceeded')
+        trace['attempts']=attempt+1
+        try:
+            # SDK defaults can retry five times; disable nested retries and bound ours.
+            options=types.HttpOptions(timeout=int(min(remaining,settings.ai_attempt_timeout_seconds)*1000),retry_options=types.HttpRetryOptions(attempts=1))
+            with genai.Client(api_key=settings.gemini_api_key,http_options=options) as client:
+                response=client.models.generate_content(model=settings.gemini_model,contents=prompt,config=types.GenerateContentConfig(thinking_config=thinking,max_output_tokens=1536,temperature=0.8))
+            usage=getattr(response,'usage_metadata',None)
+            if usage:
+                for key,field in [('input_tokens','prompt_token_count'),('output_tokens','candidates_token_count'),('thinking_tokens','thoughts_token_count'),('total_tokens','total_token_count')]:
+                    trace[key]=getattr(usage,field,None)
+            trace['latency_ms']=round((time.perf_counter()-started)*1000)
+            result=(response.text or '').strip()
+            if not result: raise ProviderResponseError('Gemini returned no usable reply. Try a different safe message.')
+            return result
+        except Exception as error:
+            code=getattr(error,'code',None)
+            trace['http_status']=code if isinstance(code,int) else None
+            trace['latency_ms']=round((time.perf_counter()-started)*1000)
+            transient=(isinstance(error,APIError) and code in (408,500,502,503,504)) or isinstance(error,(httpx.ConnectError,httpx.TimeoutException))
+            if not transient or attempt+1>=settings.ai_max_attempts: raise
+            delay=min(.5*2**attempt+random.uniform(0,.2),max(0,deadline-time.perf_counter()))
+            if deadline-time.perf_counter()<=delay: raise
+            time.sleep(delay)
+
 
 def _ollama(prompt):
     payload = json.dumps({
@@ -104,11 +132,17 @@ def _ollama(prompt):
         return json.loads(res.read().decode()).get("response", "").strip()
 
 def ask(prompt):
+    provider_trace.set(None)
     if settings.ai_provider == "ollama":
         return _ollama(prompt)
     return _gemini(prompt)
 
 def _parse_pair(raw):
+    if raw.strip().startswith('{'):
+        try:
+            data=json.loads(raw);reply=data['reply'];meaning=data['english_meaning']
+            if isinstance(reply,str) and isinstance(meaning,str) and reply.strip() and meaning.strip(): return reply.strip(),meaning.strip()
+        except (ValueError,KeyError,TypeError): pass
     reply = ""
     meaning = ""
     for line in raw.splitlines():

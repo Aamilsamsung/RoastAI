@@ -13,7 +13,7 @@ AUTH={'Authorization':'Bearer '+settings.admin_token}
 @pytest.fixture
 def client():
     with TestClient(app) as c:
-        for table in ['messages','activity','preferences','webhook_jobs','processed_messages']:
+        for table in ['messages','activity','preferences','webhook_jobs','processed_messages','generation_requests','provider_state']:
             store.execute('DELETE FROM '+table)
         store.save_preferences(main.DEFAULT)
         limits.clear()
@@ -83,7 +83,8 @@ def test_verify_and_signature(client,monkeypatch):
 
 def test_durable_webhook_duplicate(client,monkeypatch):
     monkeypatch.setattr(settings,'meta_app_secret','test-secret')
-    payload={'object':'whatsapp_business_account','entry':[{'changes':[{'value':{'messages':[{'type':'text','from':'123','id':'mid1','text':{'body':'hi'}}]}}]}]}
+    monkeypatch.setattr(settings,'whatsapp_phone_number_id','phone-test')
+    payload={'object':'whatsapp_business_account','entry':[{'changes':[{'value':{'metadata':{'phone_number_id':'phone-test'},'messages':[{'type':'text','from':'123','id':'mid1','text':{'body':'hi'}}]}}]}]}
     body=json.dumps(payload).encode();signature='sha256='+hmac.new(settings.meta_app_secret.encode(),body,hashlib.sha256).hexdigest()
     headers={'x-hub-signature-256':signature}
     assert client.post('/webhook/meta',content=body,headers=headers).json()['accepted']==1
@@ -92,6 +93,7 @@ def test_durable_webhook_duplicate(client,monkeypatch):
 
 @pytest.mark.parametrize('platform',['whatsapp','instagram'])
 def test_dry_run_and_real_send(client,monkeypatch,platform):
+    monkeypatch.setattr(settings,'social_delivery_approved',True)
     monkeypatch.setattr(main,'generate_with_meaning',lambda *args:('reply','meaning'))
     sent=[]
     async def send(*args): sent.append(args)
@@ -171,7 +173,7 @@ def test_adopts_original_v2_database_without_data_loss(tmp_path):
         assert connection.execute('SELECT text FROM messages').fetchone()[0]=='Original data'
         assert connection.execute('SELECT message FROM activity').fetchone()[0]=='Original log'
         assert connection.execute('SELECT message_id FROM processed_messages').fetchone()[0]=='old-mid'
-        assert connection.execute('SELECT version_num FROM alembic_version').fetchone()[0]=='0003'
+        assert connection.execute('SELECT version_num FROM alembic_version').fetchone()[0]=='0004'
 
 def test_message_cursor_pagination_and_validation(client):
     for i in range(125): store.add_message('local','pages','Owner','','incoming',str(i))
@@ -282,6 +284,7 @@ def test_facebook_page_filter_and_echo(monkeypatch):
 
 
 def test_snapchat_send_safety_and_dry_run(client,monkeypatch):
+    monkeypatch.setattr(settings,'social_delivery_approved',True)
     from app import snapchat
     calls=[]
     async def conversation(creator): calls.append('conversation');return {'conversation_id':'id','token':'token'}
@@ -308,3 +311,162 @@ def test_snapchat_rejects_partial_success(monkeypatch):
     async def api(*args,**kwargs): return {'request_status':'SUCCESS','group_conversation_messages':[{'sub_request_status':'ERROR'}]}
     monkeypatch.setattr(snapchat,'api',api)
     with pytest.raises(HTTPException): asyncio.run(snapchat.send({'conversation_id':'id','token':'token'},'test'))
+
+
+def test_idempotent_generation_and_separate_threads(client,monkeypatch):
+    import uuid
+    calls=[]
+    monkeypatch.setattr(main,'generate_with_meaning',lambda *args:(calls.append(args) or ('safe reply','meaning')))
+    rid=str(uuid.uuid4());payload={'request_id':rid,'conversation_id':'thread-one','message':'Safe identical prompt'}
+    first=client.post('/api/roast',headers=AUTH,json=payload)
+    second=client.post('/api/roast',headers=AUTH,json=payload)
+    assert first.status_code==second.status_code==200 and len(calls)==1
+    assert len(client.get('/api/messages?sender_id=thread-one',headers=AUTH).json())==2
+    payload['message']='changed'
+    assert client.post('/api/roast',headers=AUTH,json=payload).status_code==409
+    assert len(calls)==1
+    assert client.get('/api/messages?sender_id=thread-two',headers=AUTH).json()==[]
+    payload.update(request_id=str(uuid.uuid4()),conversation_id='thread-two')
+    assert client.post('/api/roast',headers=AUTH,json=payload).status_code==200
+    assert len(client.get('/api/conversations',headers=AUTH).json())==2
+    store.init_db()
+    assert len(client.get('/api/messages?sender_id=thread-one',headers=AUTH).json())==2
+
+
+def test_failure_status_request_id_and_no_partial_messages(client,monkeypatch):
+    import uuid
+    from google.genai.errors import ServerError
+    calls=[]
+    def failed(*args): calls.append(1);raise ServerError(503,{'error':{'message':'PRIVATE-UPSTREAM-KEY'}})
+    monkeypatch.setattr(main,'generate_with_meaning',failed)
+    payload={'request_id':str(uuid.uuid4()),'message':'Safe prompt'}
+    result=client.post('/api/roast',headers=AUTH,json=payload)
+    assert result.status_code==502 and result.json()['provider_status']==503
+    assert result.headers['X-Request-ID']==payload['request_id']
+    assert 'PRIVATE-UPSTREAM' not in result.text
+    assert not client.get('/api/messages',headers=AUTH).json()
+    assert client.get('/api/platforms/status',headers=AUTH).json()['provider_health']['status']=='unavailable'
+    assert client.post('/api/roast',headers=AUTH,json=payload).status_code==502 and len(calls)==1
+
+
+def test_account_expiry_hashes_and_deep_isolation(client,monkeypatch):
+    from app import accounts
+    import secrets,time,uuid
+    password=secrets.token_urlsafe(16)
+    creds={'email':secrets.token_hex(8)+'@example.com','password':password}
+    token=client.post('/api/auth/signup',json=creds).json()['token'];a={'Authorization':'Bearer '+token}
+    btoken=client.post('/api/auth/signup',json={**creds,'email':secrets.token_hex(8)+'@example.com'}).json()['token'];b={'Authorization':'Bearer '+btoken}
+    user=store.query('SELECT * FROM users WHERE email=:e',e=creds['email'])[0]
+    assert user['password_hash'].startswith('v2$') and password not in user['password_hash']
+    assert accounts.password_matches(password,user['password_hash']) and not accounts.password_matches('wrong',user['password_hash'])
+    monkeypatch.setattr(main,'generate_with_meaning',lambda *args:('private result','meaning'))
+    rid=str(uuid.uuid4());payload={'message':'private','request_id':rid,'conversation_id':'private-thread'}
+    assert client.post('/api/roast',headers=a,json=payload).status_code==200
+    assert client.get('/api/messages?sender_id=private-thread',headers=b).json()==[]
+    assert client.get('/api/conversations',headers=b).json()==[]
+    assert client.get('/api/activity',headers=b).json()==[]
+    assert client.post('/api/bot/start',headers=b).status_code==403
+    assert client.get('/api/snapchat/messages?creator_profile_id='+str(uuid.uuid4()),headers=b).status_code==403
+    assert client.post('/api/roast',headers=b,json=payload).status_code==200 # same request ID is scoped to its own account
+    store.execute('UPDATE sessions SET expires=:t WHERE user_id=:u',t=time.time()-1,u=user['id'])
+    assert client.get('/api/settings',headers=a).status_code==401
+
+
+def test_legacy_password_upgrade(client):
+    import secrets
+    from app import accounts
+    salt=secrets.token_hex(16);password='legacy-password-strong';email=secrets.token_hex(8)+'@example.com'
+    old=salt+':'+hashlib.scrypt(password.encode(),salt=bytes.fromhex(salt),n=16384,r=8,p=1).hex()
+    store.execute('INSERT INTO users(email,password_hash) VALUES(:e,:p)',e=email,p=old)
+    assert client.post('/api/auth/login',json={'email':email,'password':password}).status_code==200
+    assert store.query('SELECT password_hash FROM users WHERE email=:e',e=email)[0]['password_hash'].startswith('v2$')
+
+
+@pytest.mark.parametrize('mode',['normal','funny','sarcastic','savage','brutal','deadpan','intelligent','respectful','vulgar'])
+def test_mode_reaches_provider_prompt(mode,monkeypatch):
+    from app import ai
+    from app.models import BotSettings
+    prompts=[]
+    monkeypatch.setattr(ai,'ask',lambda prompt:(prompts.append(prompt) or 'REPLY: safe\nMEANING: safe'))
+    ai.generate_with_meaning('You are late again.',BotSettings(roast_mode=mode,profanity_level='off'))
+    assert ai.MODES[mode] in prompts[0] and 'no profanity' in prompts[0] and 'Profanity setting overrides mode' in prompts[0]
+
+
+@pytest.mark.parametrize('intensity',range(1,11))
+def test_intensity_reaches_provider_prompt(intensity,monkeypatch):
+    from app import ai
+    from app.models import BotSettings
+    prompts=[]
+    monkeypatch.setattr(ai,'ask',lambda prompt:(prompts.append(prompt) or 'REPLY: safe\nMEANING: safe'))
+    ai.generate_with_meaning('You are late again.',BotSettings(intensity=intensity))
+    assert f'Intensity: {intensity}/10' in prompts[0]
+
+
+@pytest.mark.parametrize('language',['same','english','hindi','kannada','malayalam','tamil','telugu','bengali','marathi','punjabi','urdu'])
+@pytest.mark.parametrize('script',['native','roman'])
+def test_language_script_voice_length(language,script,monkeypatch):
+    from app import ai
+    from app.models import BotSettings
+    prompts=[]
+    monkeypatch.setattr(ai,'ask',lambda prompt:(prompts.append(prompt) or 'REPLY: '+('a'*100)+'\nMEANING: safe'))
+    result,_=ai.generate_with_meaning('You are late again.',BotSettings(custom_instructions='Use a dry librarian voice',max_reply_length=50),reply_language=language,script_mode=script)
+    assert len(result)<=50 and ai.LANGUAGES[language] in prompts[0] and 'dry librarian voice' in prompts[0]
+    assert ('normal native script' if script=='native' else 'Romanized script') in prompts[0]
+
+
+@pytest.mark.parametrize('code,expected_calls',[(503,2),(500,2),(403,1),(404,1),(429,1)])
+def test_bounded_provider_retries(code,expected_calls,monkeypatch):
+    from app import ai
+    from google.genai.errors import ClientError,ServerError
+    calls=[]
+    class Client:
+        def __init__(self,**kwargs):
+            assert kwargs['http_options'].retry_options.attempts==1
+            self.models=self
+        def __enter__(self):return self
+        def __exit__(self,*args):pass
+        def generate_content(self,**kwargs):
+            calls.append(kwargs)
+            raise (ServerError if code>=500 else ClientError)(code,{'error':{'message':'upstream-private'}})
+    monkeypatch.setattr(ai.genai,'Client',Client);monkeypatch.setattr(settings,'gemini_api_key','test-key')
+    monkeypatch.setattr(ai.time,'sleep',lambda *args:None)
+    with pytest.raises(Exception):ai._gemini('safe')
+    assert len(calls)==expected_calls
+
+
+def test_sdk_usage_and_recovery(monkeypatch):
+    from app import ai
+    from types import SimpleNamespace
+    from google.genai.errors import ServerError
+    calls=[]
+    class Client:
+        def __init__(self,**kwargs):self.models=self
+        def __enter__(self):return self
+        def __exit__(self,*args):pass
+        def generate_content(self,**kwargs):
+            calls.append(1)
+            if len(calls)==1:raise ServerError(503,{'error':{}})
+            return SimpleNamespace(text='REPLY: hello\nMEANING: hello',usage_metadata=SimpleNamespace(prompt_token_count=100,candidates_token_count=20,thoughts_token_count=30,total_token_count=150))
+    monkeypatch.setattr(ai.genai,'Client',Client);monkeypatch.setattr(settings,'gemini_api_key','test-key');monkeypatch.setattr(ai.time,'sleep',lambda *args:None)
+    assert ai._gemini('safe').startswith('REPLY:')
+    trace=ai.provider_trace.get();assert trace['attempts']==2 and trace['input_tokens']==100 and trace['thinking_tokens']==30
+
+
+def test_validation_does_not_echo_secret(client):
+    secret='private-password'
+    response=client.post('/api/auth/login',json={'email':'bad','password':secret})
+    assert response.status_code==422 and secret not in response.text
+
+
+def test_unknown_account_events_and_delivery_approval(client,monkeypatch):
+    from app.meta import parse_events
+    monkeypatch.setattr(settings,'whatsapp_phone_number_id','owned')
+    event={'object':'whatsapp_business_account','entry':[{'changes':[{'value':{'metadata':{'phone_number_id':'wrong'},'messages':[{'type':'text','from':'friend','id':'mid','text':{'body':'hi'}}]}}]}]}
+    assert parse_events(event)==[]
+    monkeypatch.setattr(settings,'social_delivery_approved',False);monkeypatch.setattr(main,'generate_with_meaning',lambda *args:('reply','meaning'))
+    calls=[]
+    async def send(*args):calls.append(1)
+    monkeypatch.setattr(main,'whatsapp_send',send)
+    update({'enabled':True,'dry_run':False,'reply_delay_seconds':0})
+    asyncio.run(process_job({'platform':'whatsapp','sender_id':'friend','sender_name':'','message_id':'safe','text':'hi'}))
+    assert not calls

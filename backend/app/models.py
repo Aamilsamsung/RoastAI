@@ -11,6 +11,8 @@ class BotSettings(BaseModel):
     max_reply_length:int=Field(300,ge=50,le=1000); dry_run:bool=True; input_language:str=Field("auto",max_length=40)
     reply_language:ReplyLanguage="same"; script_mode:Script="roman"
 class RoastRequest(BaseModel):
+    request_id: str | None = Field(None,pattern=r"^[a-fA-F0-9-]{36}$")
+    conversation_id: str = Field("roast-me",min_length=1,max_length=100,pattern=r"^[a-zA-Z0-9_-]+$")
     message:str=Field(min_length=1,max_length=5000); sender_name:str=Field("Someone",max_length=100); input_language:str=Field("auto",max_length=40)
     reply_language:ReplyLanguage="same"; script_mode:Script="roman"
 

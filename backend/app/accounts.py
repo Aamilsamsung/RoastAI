@@ -16,19 +16,34 @@ class Credentials(BaseModel):
 
 def password_hash(password,salt=None):
     salt=salt or secrets.token_hex(16)
-    return salt+':'+hashlib.scrypt(password.encode(),salt=bytes.fromhex(salt),n=16384,r=8,p=1).hex()
+    return 'v2$32768$'+salt+'$'+hashlib.scrypt(password.encode(),salt=bytes.fromhex(salt),n=32768,r=8,p=1,maxmem=64*1024*1024).hex()
+
+def password_matches(password,stored):
+    try:
+        if stored.startswith('v2$'):
+            _,cost,salt,digest=stored.split('$')
+            if cost!='32768':return False
+            actual=hashlib.scrypt(password.encode(),salt=bytes.fromhex(salt),n=32768,r=8,p=1,maxmem=64*1024*1024).hex()
+        else:
+            salt,digest=stored.split(':')
+            actual=hashlib.scrypt(password.encode(),salt=bytes.fromhex(salt),n=16384,r=8,p=1).hex()
+        return hmac.compare_digest(actual,digest)
+    except (ValueError,TypeError):return False
+
 def authenticate(token):
     if not token: return None
     rows=store.query('SELECT user_id FROM sessions WHERE digest=:d AND expires>:now',d=hashlib.sha256(token.encode()).hexdigest(),now=time.time())
     return rows[0]['user_id'] if rows else None
 
 def sign_in(credentials,register=False):
-    digest=password_hash(credentials.password)
     if register:
+        digest=password_hash(credentials.password)
         try: store.execute('INSERT INTO users(email,password_hash) VALUES(:e,:p)',e=credentials.email,p=digest)
         except IntegrityError: raise HTTPException(409,'Unable to create account with this email')
     rows=store.query('SELECT * FROM users WHERE email=:e',e=credentials.email)
-    if not rows or not rows[0]['password_hash'] or not hmac.compare_digest(password_hash(credentials.password,rows[0]['password_hash'].split(':')[0]),rows[0]['password_hash']): raise HTTPException(401,'Invalid email or password')
+    if not rows or not rows[0]['password_hash'] or not password_matches(credentials.password,rows[0]['password_hash']): raise HTTPException(401,'Invalid email or password')
+    if not rows[0]['password_hash'].startswith('v2$'):
+        store.execute('UPDATE users SET password_hash=:p WHERE id=:u',p=password_hash(credentials.password),u=rows[0]['id'])
     return create_session(rows[0]['id'])
 
 def create_session(user_id):

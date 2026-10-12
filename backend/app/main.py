@@ -1,4 +1,4 @@
-import asyncio, json, time, hmac
+import asyncio, json, time, hmac, hashlib, logging, secrets
 from contextlib import asynccontextmanager
 from types import SimpleNamespace
 from collections import defaultdict, deque
@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.concurrency import run_in_threadpool
 from .config import settings
 from .models import BotSettings, RoastRequest
-from .ai import generate_with_meaning, provider_error_detail
+from .ai import generate_with_meaning, provider_error_detail, provider_trace
 from .meta import verify_signature, parse_events, whatsapp_send, instagram_send, facebook_send
 from . import store
 from . import accounts, snapchat
@@ -44,7 +44,7 @@ async def process_job(event):
     live=current()
     if not allowed(live,platform) or live['safety_epoch']!=cfg['safety_epoch']:
         store.log('DELIVERY','Reply cancelled by stop or delivery-setting change'); return
-    if cfg['dry_run']:
+    if cfg['dry_run'] or not settings.social_delivery_approved:
         store.log('DRY_RUN',f'{platform} reply generated without delivery')
     else:
         send={'whatsapp':whatsapp_send,'instagram':instagram_send,'facebook':facebook_send}[platform]
@@ -106,24 +106,28 @@ limits=defaultdict(deque)
 
 @app.middleware('http')
 async def protect(request: Request, call_next):
+    request.state.request_id=secrets.token_hex(16)
     if request.url.path.startswith('/api/'):
+        key=request.client.host if request.client else 'unknown'; now=time.monotonic()
+        if len(limits)>10000:
+            for name in list(limits):
+                if not limits[name] or limits[name][-1]<now-60: limits.pop(name,None)
+        bucket=limits[key]
+        while bucket and bucket[0]<now-60: bucket.popleft()
+        if len(bucket)>=settings.rate_limit_per_minute*6 and request.url.path not in ('/api/bot/stop','/api/bot/emergency-stop'):
+            return JSONResponse({'detail':'Too many requests. Try again shortly.','request_id':request.state.request_id},status_code=429,headers={'Retry-After':'60','X-Request-ID':request.state.request_id})
+        bucket.append(now)
         token=request.headers.get('authorization','').removeprefix('Bearer ')
         public=request.url.path in ('/api/auth/signup','/api/auth/login','/api/auth/config','/api/auth/google','/api/auth/google/challenge')
         admin=not settings.admin_token or hmac.compare_digest(token.encode(),settings.admin_token.encode())
         user=None if admin or public else await run_in_threadpool(accounts.authenticate,token)
         if not public and not admin and user is None:
-            return JSONResponse({'detail':'Sign in required'},status_code=401)
+            return JSONResponse({'detail':'Sign in required','request_id':request.state.request_id},status_code=401)
         store.owner.set(user or 0)
         if user and (request.url.path.startswith(('/api/bot/','/api/snapchat/')) or request.url.path=='/api/platforms/status'):
             if request.url.path.startswith(('/api/bot/','/api/snapchat/')):
                 return JSONResponse({'detail':'Social bot controls are owner-only'},status_code=403)
 
-        key=request.client.host if request.client else 'unknown'; now=time.monotonic()
-        bucket=limits[key]
-        while bucket and bucket[0]<now-60: bucket.popleft()
-        if len(bucket)>=settings.rate_limit_per_minute*6 and request.url.path not in ('/api/bot/stop','/api/bot/emergency-stop'):
-            return JSONResponse({'detail':'Too many requests. Try again shortly.'},status_code=429,headers={'Retry-After':'60'})
-        bucket.append(now)
         if public:
             auth_bucket=limits['auth:'+key]
             while auth_bucket and auth_bucket[0]<now-60: auth_bucket.popleft()
@@ -136,9 +140,15 @@ async def protect(request: Request, call_next):
                 return JSONResponse({'detail':'Generation limit reached. Try again shortly.'},status_code=429,headers={'Retry-After':'60'})
             bucket.append(now)
     response=await call_next(request)
+    response.headers['X-Request-ID']=getattr(request.state,'request_id',secrets.token_hex(8))
     response.headers['X-Content-Type-Options']='nosniff'
     if request.url.path.startswith('/api/'): response.headers['Cache-Control']='no-store'
     return response
+
+from fastapi.exceptions import RequestValidationError
+@app.exception_handler(RequestValidationError)
+async def invalid_request(request:Request,error:RequestValidationError):
+    return JSONResponse({'detail':'Invalid request fields','errors':[{'field':'.'.join(map(str,x['loc'])),'message':x['msg']} for x in error.errors()],'request_id':getattr(request.state,'request_id',None)},status_code=422)
 
 @app.get('/api/auth/config')
 def auth_config(): return {'google_client_id':settings.google_client_id}
@@ -158,6 +168,7 @@ def logout(request:Request):
     token=request.headers.get('authorization','').removeprefix('Bearer ')
     store.execute('DELETE FROM sessions WHERE digest=:d',d=hashlib.sha256(token.encode()).hexdigest())
     return {'ok':True}
+@app.get('/')
 @app.get('/health')
 def health():
     store.query('SELECT 1')
@@ -181,28 +192,38 @@ def emergency():
     value=update({'enabled':False,'emergency_stop':True}); store.log('BOT','Emergency stop activated'); return value
 @app.post('/api/roast')
 @app.post('/api/preview')
-def roast(x: RoastRequest):
-    started=time.perf_counter()
-    cfg=current()
-    ai_started=time.perf_counter()
+def roast(x: RoastRequest,request:Request):
+    started=time.perf_counter();cfg=current();rid=x.request_id or str(__import__('uuid').uuid4())
+    request.state.request_id=rid
     if cfg['emergency_stop']: raise HTTPException(409,'Emergency stop is active. Start the bot to reset it.')
+    fingerprint=hashlib.sha256(json.dumps({'input':x.model_dump(exclude={'request_id'}),'preferences':{k:cfg[k] for k in BotSettings.model_fields if k not in ('enabled','dry_run','whatsapp_enabled','instagram_enabled','facebook_enabled')}},sort_keys=True).encode()).hexdigest()
+    existing=store.claim_request(rid,fingerprint)
+    if existing:
+        if existing['fingerprint']!=fingerprint: raise HTTPException(409,'Request ID was already used with different input or settings')
+        if existing['status']=='processing': return JSONResponse({'detail':'This request is already processing. Do not resubmit with a new ID.','request_id':rid},status_code=409)
+        response=json.loads(existing['response'])
+        return JSONResponse(response,status_code=200 if existing['status']=='done' else response.get('status_code',502))
+    provider_trace.set(None)
     try:
-        reply,meaning=generate_with_meaning(x.message,SimpleNamespace(**cfg),x.sender_name,store.recent('local','roast-me'),x.input_language,x.reply_language,x.script_mode)
+        reply,meaning=generate_with_meaning(x.message,SimpleNamespace(**cfg),x.sender_name,store.recent('local',x.conversation_id),x.input_language,x.reply_language,x.script_mode)
     except Exception as error:
-        detail=provider_error_detail(error)
-        store.log('ERROR',detail)
-        import logging
-        logging.getLogger('uvicorn.error').warning('AI generation failure type=%s detail=%s',type(error).__name__,detail)
-        raise HTTPException(502,detail)
-    ai_ms=round((time.perf_counter()-ai_started)*1000)
-    if current()['safety_epoch']!=cfg['safety_epoch']: raise HTTPException(409,'Generation cancelled because bot settings changed.')
-    store.add_message('local','roast-me','You','','incoming',x.message)
-    store.add_message('local','roast-me','RoastAI','','outgoing',reply)
-    store.log('ROAST',f"Generated {cfg['roast_mode']} comeback")
-    total_ms=round((time.perf_counter()-started)*1000)
-    import logging
-    logging.getLogger('uvicorn.error').info('Roast timing ai_ms=%d total_ms=%d',ai_ms,total_ms)
-    return {'timing':{'ai_ms':ai_ms,'total_ms':total_ms},'reply':reply,'english_meaning':meaning,'mode':cfg['roast_mode'],'intensity':cfg['intensity'],'input_language':x.input_language,'reply_language':x.reply_language,'script_mode':x.script_mode}
+        trace=provider_trace.get() or {};code=getattr(error,'code',None);detail=provider_error_detail(error)
+        evidence={'status':'unavailable','model':settings.gemini_model,'checked_at':time.time(),'request_id':rid,'http_status':code if isinstance(code,int) else None,'error_type':type(error).__name__}
+        store.record_provider(evidence)
+        payload={'detail':detail,'request_id':rid,'provider_status':evidence['http_status'],'attempts':trace.get('attempts',0),'status_code':502}
+        store.finish_request(rid,payload);store.log('ERROR',detail+' · request '+rid)
+        logging.getLogger('uvicorn.error').warning('AI failure request_id=%s provider=%s model=%s http_status=%s type=%s attempts=%s',rid,settings.ai_provider,settings.gemini_model,evidence['http_status'],type(error).__name__,trace.get('attempts',0))
+        return JSONResponse(payload,status_code=502)
+    trace=provider_trace.get() or {};ai_ms=round((time.perf_counter()-started)*1000)
+    store.record_provider({'status':'healthy','model':trace.get('model',settings.gemini_model),'checked_at':time.time(),'request_id':rid,'latency_ms':ai_ms})
+    if current()['safety_epoch']!=cfg['safety_epoch']:
+        payload={'detail':'Generation cancelled because bot settings changed.','request_id':rid,'status_code':409}
+        store.finish_request(rid,payload);return JSONResponse(payload,status_code=409)
+    response={'request_id':rid,'conversation_id':x.conversation_id,'timing':{'ai_ms':ai_ms},'usage':trace,'reply':reply,'english_meaning':meaning,'mode':cfg['roast_mode'],'intensity':cfg['intensity'],'input_language':x.input_language,'reply_language':x.reply_language,'script_mode':x.script_mode}
+    store.finish_request(rid,response,x.message,reply,x.conversation_id)
+    response['timing']['total_ms']=round((time.perf_counter()-started)*1000)
+    logging.getLogger('uvicorn.error').info('Roast request_id=%s model=%s ai_ms=%d total_ms=%d input_tokens=%s output_tokens=%s thinking_tokens=%s attempts=%s',rid,trace.get('model'),ai_ms,response['timing']['total_ms'],trace.get('input_tokens'),trace.get('output_tokens'),trace.get('thinking_tokens'),trace.get('attempts'))
+    return response
 @app.get('/api/activity')
 def activity(): return store.activity()
 @app.get('/api/messages')
@@ -219,7 +240,7 @@ def platforms():
     return {'gemini':bool(settings.gemini_api_key and settings.gemini_model),'ollama':settings.ai_provider=='ollama' and bool(settings.ollama_base_url),
         'whatsapp':bool(settings.whatsapp_access_token and settings.whatsapp_phone_number_id),'instagram':bool(settings.instagram_access_token and settings.instagram_account_id),
         'facebook':bool(settings.facebook_page_access_token and settings.facebook_page_id),'snapchat':bool(settings.snapchat_access_token and settings.snapchat_profile_id),'snapchat_capability':'creator_collaboration_approval_required',
-        'provider':settings.ai_provider,'status_kind':'configuration'}
+        'provider':settings.ai_provider,'provider_health':store.provider_status(),'delivery_approved':settings.social_delivery_approved,'status_kind':'configuration_only_not_connection_verified'}
 @app.get('/webhook/meta',response_class=PlainTextResponse)
 async def verify(request:Request):
     q=request.query_params
@@ -259,7 +280,7 @@ async def snapchat_message(x:snapchat.Collaboration):
     from datetime import datetime, timezone
     history=store.recent('snapchat',sender)
     if history and (datetime.now(timezone.utc)-datetime.fromisoformat(history[-1]['timestamp'])).total_seconds()<cfg['cooldown_seconds']: raise HTTPException(429,'Conversation cooldown active')
-    if cfg['dry_run']:
+    if cfg['dry_run'] or not settings.social_delivery_approved:
         store.log('DRY_RUN','Snapchat collaboration message previewed without sending')
         return {'accepted':False,'dry_run':True}
     conv=await snapchat.conversation(x.creator_profile_id)

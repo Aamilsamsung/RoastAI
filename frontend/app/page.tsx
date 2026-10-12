@@ -45,6 +45,8 @@ export default function Home() {
   const [convos,setConvos] = useState<any[]>([])
   const [messages,setMessages] = useState<any[]>([])
   const [notice,setNotice] = useState('')
+  const [error,setError] = useState('')
+  const generationLock = useRef(false)
   const [busy,setBusy] = useState(false)
   const [connected,setConnected] = useState(false)
   const [token,setToken] = useState('')
@@ -68,14 +70,14 @@ export default function Home() {
     const data = await response.json().catch(()=>({detail:'The server returned an invalid response'}))
     if(!response.ok) {
       if(response.status===401 && !path.startsWith('/api/auth/')) {setAuthorized(false);setToken('');try{sessionStorage.removeItem('roastai-session')}catch{}}
-      throw Error(typeof data.detail==='string'?data.detail:'Check your inputs and try again.')
+      throw Error((typeof data.detail==='string'?data.detail:'Check your inputs and try again.')+(data.request_id?' · Request '+data.request_id:''))
     }
     return data
   }
   const action = async(work:()=>Promise<void>) => {
     if(busy) return
     setBusy(true)
-    try { await work() } catch(e:any) { setNotice(e.message) } finally { setBusy(false) }
+    try { await work() } catch(e:any) { setError(e.message) } finally { setBusy(false) }
   }
 
 
@@ -83,7 +85,7 @@ export default function Home() {
     try {
       const [s,h,a,c,m] = await Promise.all([
         request('/api/settings',{},initial?90000:45000),request('/api/platforms/status',{},initial?90000:45000),request('/api/activity',{},initial?90000:45000),
-        request('/api/conversations',{},initial?90000:45000),request('/api/messages?platform=local&sender_id=roast-me',{},initial?90000:45000)
+        request('/api/conversations',{},initial?90000:45000),initial?request('/api/messages?platform='+selectedThread.platform+'&sender_id='+encodeURIComponent(selectedThread.sender_id),{},90000):Promise.resolve([])
       ])
       if(initial) {setSettings(s);setNotice('')}
       else setSettings((old:any)=>({...old,enabled:s.enabled,emergency_stop:s.emergency_stop}))
@@ -94,11 +96,11 @@ export default function Home() {
     finally { setInitializing(false) }
   }
   useEffect(()=>{
-    try {const saved=JSON.parse(sessionStorage.getItem('roastai-session')||'null');if(saved?.token){setAuthMode(saved.mode==='owner'?'owner':'login');setToken(saved.token)}}catch{}
+    try {const saved=JSON.parse(sessionStorage.getItem('roastai-session')||'null');if(saved?.token){setAuthMode(saved.mode==='owner'?'owner':'login');setToken(saved.token);if(saved.thread?.platform && saved.thread?.sender_id)setSelectedThread(saved.thread)}}catch{}
     setSessionReady(true)
   },[])
   useEffect(()=>{if(!sessionReady)return;if(token && authMode!=='owner') refresh(true);else if(token && initializing) refresh(true);else setInitializing(false)},[sessionReady,token])
-  useEffect(()=>{if(authorized && token){try{sessionStorage.setItem('roastai-session',JSON.stringify({token,mode:authMode}))}catch{}}},[authorized,token,authMode])
+  useEffect(()=>{if(authorized && token){try{sessionStorage.setItem('roastai-session',JSON.stringify({token,mode:authMode,thread:selectedThread}))}catch{}}},[authorized,token,authMode,selectedThread])
   useEffect(()=>{
     if(!notice || !authorized) return
     const timer=setTimeout(()=>setNotice(''),7000)
@@ -110,10 +112,10 @@ export default function Home() {
     return ()=>clearInterval(interval)
   },[authorized,token,busy,loading])
   useEffect(()=>{
-    const handler=(e:KeyboardEvent)=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();setTab('roast');setMsg('')}}
+    const handler=(e:KeyboardEvent)=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();newConversation()}}
     window.addEventListener('keydown',handler)
     return ()=>window.removeEventListener('keydown',handler)
-  },[])
+  },[busy])
   useEffect(()=>{
     const dialog=controlsDialog.current
     if(!controlsOpen||!dialog||tab!=='roast'||!authorized)return
@@ -149,22 +151,28 @@ export default function Home() {
     try {
       setSettings(await request('/api/bot/emergency-stop',{method:'POST'}))
       setNotice('Emergency stop activated'); await refresh()
-    } catch(e:any) { setNotice(e.message) }
+    } catch(e:any) { setError(e.message) }
   }
   const roast = async() => {
-    if(!msg.trim() || loading || busy) return
+    if(!msg.trim() || loading || busy || generationLock.current) return
+    generationLock.current=true;setError('')
     setBusy(true); setLoading(true); setReply(''); setMeaning(''); setNotice('')
     try {
       // Studio controls apply to this request even before an explicit Save.
       const saved=await request('/api/settings',{method:'PUT',body:JSON.stringify(settings)})
       setSettings(saved)
-      const d=await request('/api/roast',{method:'POST',body:JSON.stringify({message:msg,input_language:settings.input_language,reply_language:settings.reply_language,script_mode:settings.script_mode})})
+      const d=await request('/api/roast',{method:'POST',body:JSON.stringify({request_id:crypto.randomUUID(),conversation_id:selectedThread.platform==='local'?selectedThread.sender_id:'roast-me',message:msg,input_language:settings.input_language,reply_language:settings.reply_language,script_mode:settings.script_mode})})
       setReply(d.reply); setMeaning(d.english_meaning); setResultMeta(d); setNotice('Reply and English meaning generated'); setLoading(false)
-      const latest=await request('/api/messages?platform=local&sender_id=roast-me')
-      setMessages(latest);setHasOlder(latest.length===100);setSelectedThread({platform:'local',sender_id:'roast-me'})
+      const latest=await request('/api/messages?platform=local&sender_id='+encodeURIComponent(d.conversation_id||'roast-me'))
+      setMessages(latest);setHasOlder(latest.length===100);setSelectedThread({platform:'local',sender_id:d.conversation_id||'roast-me'})
       setThread('Local Roast Studio'); await refresh()
-    } catch(e:any) { setNotice(e.message) }
-    finally { setLoading(false); setBusy(false) }
+    } catch(e:any) { setError(e.message) }
+    finally { generationLock.current=false;setLoading(false); setBusy(false);request('/api/platforms/status').then(setHealth).catch(()=>{}) }
+  }
+  const newConversation = () => {
+    if(generationLock.current||busy)return
+    setTab('roast');setMsg('');setReply('');setMeaning('');setMessages([]);setHasOlder(false);setError('')
+    setSelectedThread({platform:'local',sender_id:crypto.randomUUID()});setThread('New conversation')
   }
   const clearHistory = () => action(async()=>{
     if(!window.confirm('Delete all conversation messages? Activity and delivery records are retained.')) return
@@ -192,14 +200,14 @@ export default function Home() {
   const title = ({roast:'Roast Studio',conversations:'Conversations',activity:'Activity',platforms:'Connected socials',settings:'Settings'} as any)[tab]
 
   if(initializing) return <HubLoading/>
-  if(!authorized) return <main className="accessScreen"><div className="card accessCard"><div className="brand"><Logo large/><h1>RoastAI</h1></div><h2>{authMode==='signup'?'Create your account':'Welcome to RoastAI'}</h2><p className="muted">Your conversations and preferences stay private to your account.</p><div className="modeScroll">{[['login','Sign in'],['signup','Sign up'],['owner','Owner access']].map(([mode,label])=><button key={mode} className={'mode '+(authMode===mode?'selected':'')} onClick={()=>{setAuthMode(mode);setNotice('')}}>{label}</button>)}</div><form onSubmit={e=>{e.preventDefault();action(async()=>{if(authMode==='owner'){await refresh(true);return}const data=await request('/api/auth/'+(authMode==='signup'?'signup':'login'),{method:'POST',body:JSON.stringify({email,password})});setPassword('');setToken(data.token)})}}>{authMode==='owner'?<label>Workspace access token<input type="password" autoComplete="off" value={token} onChange={e=>setToken(e.target.value)} required/></label>:<><label>Email<input type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} required/></label><label>Password<input type="password" minLength={12} maxLength={128} autoComplete={authMode==='signup'?'new-password':'current-password'} value={password} onChange={e=>setPassword(e.target.value)} required/></label><small className="muted">Use at least 12 characters.</small></>}<button className="primary full" disabled={busy}>{busy?'Connecting to HUB…':authMode==='signup'?'Create account':authMode==='owner'?'Connect':'Sign in'}</button></form>{authMode!=='owner'&&<GoogleSignIn request={request} onSuccess={data=>{setAuthMode('login');setToken(data.token);setPassword('')}} onError={setNotice}/>}{notice&&<p role="alert">{notice}</p>}</div></main>
+  if(!authorized) return <main className="accessScreen"><div className="card accessCard"><div className="brand"><Logo large/><h1>RoastAI</h1></div><h2>{authMode==='signup'?'Create your account':'Welcome to RoastAI'}</h2><p className="muted">Your conversations and preferences stay private to your account.</p><div className="modeScroll">{[['login','Sign in'],['signup','Sign up'],['owner','Owner access']].map(([mode,label])=><button key={mode} className={'mode '+(authMode===mode?'selected':'')} onClick={()=>{setAuthMode(mode);setNotice('')}}>{label}</button>)}</div><form onSubmit={e=>{e.preventDefault();action(async()=>{if(authMode==='owner'){await refresh(true);return}const data=await request('/api/auth/'+(authMode==='signup'?'signup':'login'),{method:'POST',body:JSON.stringify({email,password})});setPassword('');setToken(data.token)})}}>{authMode==='owner'?<label>Workspace access token<input type="password" autoComplete="off" value={token} onChange={e=>setToken(e.target.value)} required/></label>:<><label>Email<input type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} required/></label><label>Password<input type="password" minLength={12} maxLength={128} autoComplete={authMode==='signup'?'new-password':'current-password'} value={password} onChange={e=>setPassword(e.target.value)} required/></label><small className="muted">Use at least 12 characters.</small></>}<button className="primary full" disabled={busy}>{busy?'Connecting to HUB…':authMode==='signup'?'Create account':authMode==='owner'?'Connect':'Sign in'}</button></form>{authMode!=='owner'&&<GoogleSignIn request={request} onSuccess={data=>{setAuthMode('login');setToken(data.token);setPassword('')}} onError={setNotice}/>}{error&&<p role="alert">{error}</p>}{notice&&<p role="status">{notice}</p>}</div></main>
   return <main>
     <aside className="sidebar desktopSidebar">
       <div className="brand"><Logo/><div><b>Roast<span>AI</span></b><small>Gemini roast workspace</small></div></div>
-      <button className="newRoast" onClick={()=>{setTab('roast');setMsg('')}}><Icon name="bolt"/> New roast <kbd>⌘ K</kbd></button>
+      <button className="newRoast" onClick={()=>{newConversation()}}><Icon name="bolt"/> New roast <kbd>⌘ K</kbd></button>
       <nav aria-label="Workspace navigation">{nav.map(([id,label,icon])=><button key={id} className={tab===id?'nav active':'nav'} aria-label={label} aria-current={tab===id?'page':undefined} onClick={()=>{setTab(id);refresh()}}><Icon name={icon}/><span>{label}</span>{id==='activity'&&activities.length>0?<em>{Math.min(activities.length,99)}</em>:null}</button>)}</nav>
       <div className="sideCard">
-        <div className="miniLogo"><Logo/></div><div><strong>{settings.enabled?'Bot is live':'Bot is paused'}</strong><small>{settings.dry_run?'Dry-run mode':'Live delivery'}</small></div>
+        <div className="miniLogo"><Logo/></div><div><strong>{settings.enabled?'Bot enabled':'Bot paused'}</strong><small>{settings.dry_run||!health.delivery_approved?'Dry-run enforced':'Delivery approved'}</small></div>
         <button aria-label="Toggle bot" aria-pressed={settings.enabled} onClick={toggle} disabled={busy||loading||authMode!=='owner'} title={authMode==='owner'?'Toggle social bot':'Social bot controls are owner-only'} className={settings.enabled?'tinySwitch on':'tinySwitch'}><i/></button>
       </div>
       <button className="emergency" disabled={authMode!=='owner'} title={authMode==='owner'?'Stop social delivery':'Social bot controls are owner-only'} onClick={emergency}>Emergency stop</button>
@@ -210,10 +218,10 @@ export default function Home() {
       <div className="drawerHeader"><h2 id="mobile-navigation-title">Workspace</h2><button autoFocus className="secondary" aria-label="Close navigation" onClick={()=>setMenuOpen(false)}>✕</button></div>
       <aside className="sidebar mobileSidebar">
       <div className="brand"><Logo/><div><b>Roast<span>AI</span></b><small>Gemini roast workspace</small></div></div>
-      <button className="newRoast" onClick={()=>{setMenuOpen(false);setTab('roast');setMsg('')}}><Icon name="bolt"/> New roast <kbd>⌘ K</kbd></button>
+      <button className="newRoast" onClick={()=>{setMenuOpen(false);newConversation()}}><Icon name="bolt"/> New roast <kbd>⌘ K</kbd></button>
       <nav aria-label="Workspace navigation">{nav.map(([id,label,icon])=><button key={id} className={tab===id?'nav active':'nav'} aria-label={label} aria-current={tab===id?'page':undefined} onClick={()=>{setMenuOpen(false);setTab(id);refresh()}}><Icon name={icon}/><span>{label}</span>{id==='activity'&&activities.length>0?<em>{Math.min(activities.length,99)}</em>:null}</button>)}</nav>
       <div className="sideCard">
-        <div className="miniLogo"><Logo/></div><div><strong>{settings.enabled?'Bot is live':'Bot is paused'}</strong><small>{settings.dry_run?'Dry-run mode':'Live delivery'}</small></div>
+        <div className="miniLogo"><Logo/></div><div><strong>{settings.enabled?'Bot enabled':'Bot paused'}</strong><small>{settings.dry_run||!health.delivery_approved?'Dry-run enforced':'Delivery approved'}</small></div>
         <button aria-label="Toggle bot" aria-pressed={settings.enabled} onClick={toggle} disabled={busy||loading||authMode!=='owner'} title={authMode==='owner'?'Toggle social bot':'Social bot controls are owner-only'} className={settings.enabled?'tinySwitch on':'tinySwitch'}><i/></button>
       </div>
       <button className="emergency" disabled={authMode!=='owner'} title={authMode==='owner'?'Stop social delivery':'Social bot controls are owner-only'} onClick={emergency}>Emergency stop</button>
@@ -222,9 +230,10 @@ export default function Home() {
     </dialog>
 
     <section className="content">
+      {error&&<div className="errorBanner" role="alert"><span>{error}</span><button className="secondary" onClick={()=>setError('')} aria-label="Dismiss error">✕</button></div>}
       <header className="topbar">
         <div><div className="eyebrow">ROASTAI / {tab.toUpperCase()}</div><h1>{title}</h1><p>Fast comebacks, multilingual control, and a clean command center.</p></div>
-        <div className="topRight"><div className={connected&&health.gemini?'gemini':'gemini pendingGemini'}><i/> Gemini <span>{!connected?'Offline':health.gemini?'Configured':'Setup needed'}</span></div><button className={settings.enabled?'power on':'power'} onClick={toggle} disabled={busy||loading||authMode!=='owner'}><i/>{settings.enabled?'Bot ON':'Bot OFF'}</button></div>
+        <div className="topRight"><div className={connected&&health.provider_health?.status==='healthy'?'gemini':'gemini pendingGemini'}><i/> Gemini <span>{!connected?'Offline':!health.gemini?'Setup needed':health.provider_health?.status==='healthy'?'Last request OK':health.provider_health?.status==='unavailable'?'Unavailable':'Not tested'}</span></div><button className={settings.enabled?'power on':'power'} onClick={toggle} disabled={busy||loading||authMode!=='owner'}><i/>{settings.enabled?'Bot ON':'Bot OFF'}</button></div>
       </header>
 
       {notice && <div className="toast" role="status" aria-live="polite">{notice}</div>}
@@ -236,13 +245,13 @@ export default function Home() {
             <h2>Say less.<br/><b>Roast better.</b></h2>
             <p>Drop a message and build a comeback in your language, your script, your style.</p>
           </div>
-          <div className="heroStats"><div><b>1</b><span>Gemini pass</span></div><div><b>12+</b><span>Languages</span></div><div><b>10</b><span>Intensity levels</span></div></div>
+          <div className="heroStats"><div><b>1</b><span>Reply + meaning</span></div><div><b>12+</b><span>Languages</span></div><div><b>10</b><span>Intensity levels</span></div></div>
         </div>
 
         <button className="secondary mobileControlsButton" aria-haspopup="dialog" aria-expanded={controlsOpen} aria-controls="mobile-roast-controls" onClick={()=>setControlsOpen(true)}><Icon name="settings"/> Controls <span>{settings.roast_mode} · {settings.intensity}/10</span></button>
         <dialog id="mobile-roast-controls" ref={controlsDialog} className="mobileControlsDrawer" aria-labelledby="mobile-controls-title" onCancel={()=>setControlsOpen(false)} onClose={()=>setControlsOpen(false)} onClick={e=>{if(e.target===e.currentTarget){const bounds=e.currentTarget.getBoundingClientRect();if(e.clientX<bounds.left||e.clientX>bounds.right||e.clientY<bounds.top||e.clientY>bounds.bottom)setControlsOpen(false)}}}>
           <div className="drawerHeader"><div><span className="kicker">ROAST STUDIO</span><h2 id="mobile-controls-title">Your controls</h2></div><button autoFocus className="secondary" aria-label="Close controls" onClick={()=>setControlsOpen(false)}>✕</button></div>
-          <div className="drawerContent">
+          {error&&<p role="alert" className="muted">{error}</p>}<div className="drawerContent">
             <div className="controls3">
               <label>Input language<select value={settings.input_language} onChange={e=>setSettings({...settings,input_language:e.target.value})}>{langs.map(x=><option value={x[0]} key={x[0]}>{x[1]}</option>)}</select></label>
               <label>Reply language<select value={settings.reply_language} onChange={e=>setSettings({...settings,reply_language:e.target.value})}>{langs.slice(1).map(x=><option value={x[0]} key={x[0]}>{x[1]}</option>)}</select></label>
@@ -293,7 +302,7 @@ export default function Home() {
 
         {(reply||loading) && <div className="resultGrid">
           <div className="card resultCard"><div className="resultHead"><span className="kicker">ROAST GENERATED</span><button className="copy" disabled={!reply} onClick={copyReply}>Copy</button></div><div className={loading?'reply loading':'reply'}>{loading?'Generating a sharp comeback…':reply}</div><div className="resultMeta"><span>{resultMeta?.reply_language}</span><span>{resultMeta?.script_mode}</span><span>{resultMeta?.mode} • {resultMeta?.intensity}/10</span></div></div>
-          <div className="card meaningCard"><span className="kicker">ENGLISH MEANING</span><p>{loading?'Waiting for the same Gemini response…':meaning}</p><div className="fastNote"><Icon name="bolt"/> One AI pass for reply + meaning</div></div>
+          <div className="card meaningCard"><span className="kicker">ENGLISH MEANING</span><p>{loading?'Waiting for the same Gemini response…':meaning}</p><div className="fastNote"><Icon name="bolt"/> Reply + meaning together · bounded retries</div></div>
         </div>}
       </div>}
 
@@ -301,7 +310,7 @@ export default function Home() {
 
       {tab==='activity' && <div className="pageGrid"><div className="card listCard"><div className="cardHead"><div><span className="kicker">SYSTEM LOG</span><h2>Activity</h2></div><span className="liveBadge"><i/> Live</span></div>{activities.length===0?<Empty text="Nothing has happened yet."/>:<div>{activities.map((a,i)=><div className="activity" key={i}><span className="activityDot"/><div><b>{a.category}</b><p>{a.message}</p></div><time>{new Date(a.timestamp).toLocaleTimeString()}</time></div>)}</div>}</div><div className="card statCard"><span className="kicker">HEALTH</span><div className="bigStat">{connected&&health.gemini?'CONFIGURED':'—'}</div><p>Gemini configuration</p><div className="healthRow"><span>WhatsApp</span><b className={health.whatsapp?'ok':''}>{health.whatsapp?'Configured':'Setup needed'}</b></div><div className="healthRow"><span>Instagram</span><b className={health.instagram?'ok':''}>{health.instagram?'Configured':'Setup needed'}</b></div></div></div>}
 
-      {tab==='platforms' && <div className="pageGrid"><div className="card listCard"><div className="kicker">CONNECT YOUR SOCIALS</div><h2>Delivery channels</h2><p className="muted">Only official platform APIs are used. Keep dry-run on until your Meta app is configured.</p>{[['Instagram','instagram','View messages and account events'],['WhatsApp','whatsapp','Receive and send supported messages'],['Facebook Messenger','facebook','Reply to messages sent to your Facebook Page']].map(([name,key,desc])=><div className="platformRow" key={key}><div className="platformBrand">{key==='instagram'?'◎':'◉'}</div><div><b>{name}</b><small>{desc}</small></div><span className={health[key]?'connected':'pending'}>{health[key]?'Credentials set':'Setup needed'}</span><button onClick={()=>{setTab('settings');setNotice('Configure platform credentials in the backend Render environment')}}>Configure</button></div>)}<div className="platformRow"><div className="platformBrand">◉</div><div><b>Snapchat</b><small>Official brand–creator collaboration API. Requires Snapchat approval; ordinary friend DMs are not supported.</small></div><span className="pending">Approval required</span></div>{authMode==='owner'&&<SnapchatCollaboration request={request} onError={setNotice}/>}</div><div className="card statCard"><span className="kicker">DELIVERY SAFETY</span><h3>Dry-run</h3><p className="muted">Replies are generated and logged without being sent while this is enabled.</p><div className="settingRow"><span>Dry-run mode</span><button className={settings.dry_run?'switch on':'switch'} aria-label="Dry-run mode" aria-pressed={settings.dry_run} onClick={()=>setSettings({...settings,dry_run:!settings.dry_run})}><i/></button></div><button className="secondary full" onClick={save} disabled={busy||loading}>Save delivery settings</button></div></div>}
+      {tab==='platforms' && <div className="pageGrid"><div className="card listCard"><div className="kicker">CONNECT YOUR SOCIALS</div><h2>Delivery channels</h2><p className="muted">Only official platform APIs are used. Credentials set does not verify ownership, permission or delivery. Live delivery requires controlled tests and owner approval.</p>{[['Instagram','instagram','View messages and account events'],['WhatsApp','whatsapp','Receive and send supported messages'],['Facebook Messenger','facebook','Reply to messages sent to your Facebook Page']].map(([name,key,desc])=><div className="platformRow" key={key}><div className="platformBrand">{key==='instagram'?'◎':'◉'}</div><div><b>{name}</b><small>{desc}</small></div><span className={health[key]?'connected':'pending'}>{health[key]?'Credentials set':'Setup needed'}</span><button onClick={()=>{setTab('settings');setNotice('Configure platform credentials in the backend Render environment')}}>Configure</button></div>)}<div className="platformRow"><div className="platformBrand">◉</div><div><b>Snapchat</b><small>Official brand–creator collaboration API. Requires Snapchat approval; ordinary friend DMs are not supported.</small></div><span className="pending">Approval required</span></div>{authMode==='owner'&&<SnapchatCollaboration request={request} onError={setNotice}/>}</div><div className="card statCard"><span className="kicker">DELIVERY SAFETY</span><h3>Dry-run</h3><p className="muted">Replies are generated and logged without being sent while this is enabled.</p><div className="settingRow"><span>Dry-run mode</span><button className={settings.dry_run?'switch on':'switch'} aria-label="Dry-run mode" aria-pressed={settings.dry_run} onClick={()=>setSettings({...settings,dry_run:!settings.dry_run})}><i/></button></div><button className="secondary full" onClick={save} disabled={busy||loading}>Save delivery settings</button></div></div>}
 
       {tab==='settings' && <div className="settingsGrid">
         <div className="card settingsCard"><div className="kicker">ROAST ENGINE</div>{authMode!=='owner'&&<><h3>Link your Google account</h3><p className="muted">Use the Google account matching your signed-in email.</p><GoogleSignIn link request={request} onSuccess={data=>{setToken(data.token);setNotice('Google account linked')}} onError={setNotice}/></>}<h2>Default behavior</h2><div className="formGrid"><label>AI provider<select value={health.provider||'gemini'} disabled><option>gemini</option><option>ollama</option></select></label><label>Default mode<select value={settings.roast_mode} onChange={e=>setSettings({...settings,roast_mode:e.target.value})}>{modes.map(m=><option key={m}>{m}</option>)}</select></label><label>Reply delay (seconds)<input type="number" min="0" max="60" value={settings.reply_delay_seconds} onChange={e=>setSettings({...settings,reply_delay_seconds:+e.target.value})}/></label><label>Cooldown (seconds)<input type="number" min="0" max="3600" value={settings.cooldown_seconds} onChange={e=>setSettings({...settings,cooldown_seconds:+e.target.value})}/></label></div><button className="primary" onClick={save} disabled={busy||loading}>Save settings</button></div>

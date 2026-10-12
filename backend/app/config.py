@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     instagram_api_version: str = "v23.0"
     instagram_login_type: Literal["instagram", "facebook"] = "instagram"
     ai_timeout_seconds: int = Field(30,ge=1,le=120)
+    ai_attempt_timeout_seconds: int = Field(12,ge=1,le=30)
+    ai_max_attempts: int = Field(2,ge=1,le=3)
+    social_delivery_approved: bool = False
     rate_limit_per_minute: int = Field(20,ge=1,le=1000)
     gemini_api_key: str = ""
     gemini_model: str = "gemini-3.8-flash"

@@ -52,3 +52,5 @@ html,body{background:#f6f3ed;color:#211e1a}body{background:radial-gradient(ellip
 .mobileSidebar nav{display:flex!important;flex-direction:column}.mobileSidebar .nav{justify-content:flex-start;min-height:44px}.mobileSidebar .nav span{display:inline}
 .mobileSidebar .newRoast,.mobileSidebar .sideCard{display:flex}.mobileSidebar .privacy{display:block}.mobileSidebar .sideCard{margin-top:24px}.mobileSidebar .brand{padding:0 0 16px}
 }
+
+.errorBanner{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid #b87059;background:#fff2eb;color:#6c281c;border-radius:12px;padding:14px;margin-bottom:18px;font-size:13px;overflow-wrap:anywhere}.errorBanner span{min-width:0}.errorBanner button{flex-shrink:0;min-width:44px;min-height:44px}
