@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import Logo from '../components/Logo'
 import SnapchatCollaboration from '../components/SnapchatCollaboration'
 import GoogleSignIn from '../components/GoogleSignIn'
+import AuthScreen from '../components/AuthScreen'
 import HubLoading from '../components/HubLoading'
 
 const API = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '')
@@ -240,7 +241,7 @@ export default function Home() {
   const title = ({roast:'Roast Studio',conversations:'Conversations',activity:'Activity',platforms:'Connected socials',settings:'Settings'} as any)[tab]
 
   if(initializing) return <HubLoading/>
-  if(!authorized) return <main className="accessScreen"><div className="card accessCard"><div className="brand"><Logo large/><h1>RoastAI</h1></div><h2>{authMode==='signup'?'Create your account':'Welcome to RoastAI'}</h2><p className="muted">Your conversations and preferences stay private to your account.</p><div className="modeScroll">{[['login','Sign in'],['signup','Sign up'],['owner','Owner access']].map(([mode,label])=><button key={mode} className={'mode '+(authMode===mode?'selected':'')} onClick={()=>{setAuthMode(mode);setNotice('')}}>{label}</button>)}</div><form onSubmit={e=>{e.preventDefault();action(async()=>{if(authMode==='owner'){await refresh(true);return}const data=await request('/api/auth/'+(authMode==='signup'?'signup':'login'),{method:'POST',body:JSON.stringify({email,password})});setPassword('');setToken(data.token)})}}>{authMode==='owner'?<label>Workspace access token<input type="password" autoComplete="off" value={token} onChange={e=>setToken(e.target.value)} required/></label>:<><label>Email<input type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} required/></label><label>Password<input type="password" minLength={12} maxLength={128} autoComplete={authMode==='signup'?'new-password':'current-password'} value={password} onChange={e=>setPassword(e.target.value)} required/></label><small className="muted">Use at least 12 characters.</small></>}<button className="primary full" disabled={busy}>{busy?'Connecting to HUB…':authMode==='signup'?'Create account':authMode==='owner'?'Connect':'Sign in'}</button></form>{authMode!=='owner'&&<GoogleSignIn request={request} onSuccess={data=>{setAuthMode('login');setToken(data.token);setPassword('')}} onError={setError}/>}{error&&<p role="alert">{error}</p>}{notice&&<p role="status">{notice}</p>}</div></main>
+  if(!authorized) return <AuthScreen mode={authMode} setMode={setAuthMode} email={email} setEmail={setEmail} password={password} setPassword={setPassword} token={token} setToken={setToken} busy={busy} error={error} notice={notice} clearError={()=>{setError('');setNotice('')}} request={request} onGoogle={data=>{setAuthMode('login');setToken(data.token);setPassword('')}} onError={setError} submit={()=>action(async()=>{if(authMode==='owner'){await refresh(true);return}const data=await request('/api/auth/'+(authMode==='signup'?'signup':'login'),{method:'POST',body:JSON.stringify({email,password})});setPassword('');setToken(data.token)})}/>
   return <main>
     <aside className="sidebar desktopSidebar">
       <div className="brand"><Logo/><div><b>Roast<span>AI</span></b><small>Gemini roast workspace</small></div></div>
