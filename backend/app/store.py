@@ -106,11 +106,14 @@ def claim_request(request_id,fingerprint):
         if inserted.rowcount==1:return None
         return dict(c.execute(text('SELECT * FROM generation_requests WHERE owner_id=:o AND request_id=:r'),{'o':owner.get(),'r':request_id}).mappings().one())
 
-def finish_request(request_id,response,message=None,reply=None,conversation_id='roast-me'):
+def finish_request(request_id,response,message=None,reply=None,conversation_id='roast-me',started_at=None):
     # Conversation pair, activity and idempotent result commit together.
     with engine.begin() as c:
         if message is not None:
             for direction,value,name in [('incoming',message,'You'),('outgoing',reply,'RoastAI')]:
                 c.execute(messages.insert().values(owner_id=owner.get(),platform='local',sender_id=conversation_id,sender_name=name,message_id=request_id,direction=direction,text=value,timestamp=now()))
             c.execute(logs.insert().values(owner_id=owner.get(),category='ROAST',message='Generated comeback · request '+request_id,timestamp=now()))
+        if started_at is not None:
+            import time
+            response['timing']['total_ms']=round((time.perf_counter()-started_at)*1000)
         c.execute(text('UPDATE generation_requests SET status=:s,response=:d WHERE owner_id=:o AND request_id=:r'),{'s':'done' if message is not None else 'failed','d':json.dumps(response),'o':owner.get(),'r':request_id})

@@ -69,6 +69,19 @@ with TestClient(app) as client:
     assert store.query('SELECT status FROM webhook_jobs')[0]['status']=='uncertain'
     assert client.get('/health').status_code==200
     assert client.get('/api/settings',headers={'Authorization':'Bearer '+os.environ['ADMIN_TOKEN']}).json()['custom_instructions']=='Persistent voice'
+# Additive reliability migration and atomic scoped replay survive PostgreSQL restart.
+assert store.query('SELECT version_num FROM alembic_version')[0]['version_num']=='0004'
+assert store.claim_request('pg-request','fingerprint') is None
+assert store.claim_request('pg-request','fingerprint')['status']=='processing'
+store.finish_request('pg-request',{'reply':'safe'},'incoming safe','safe','pg-thread')
+assert store.claim_request('pg-request','fingerprint')['status']=='done'
+assert len(store.conversation_messages('local','pg-thread'))==2
+store.owner.set(7)
+assert store.conversation_messages('local','pg-thread')==[]
+assert store.claim_request('pg-request','fingerprint') is None
+store.owner.set(0)
+store.init_db()
+assert store.claim_request('pg-request','fingerprint')['status']=='done'
 print('PostgreSQL migration, import sequences, persistence, concurrent locks, deduplication and restart checks passed')
 '''
             env={**os.environ,'DATABASE_URL':test_url,'ENVIRONMENT':'test','ADMIN_TOKEN':'test-postgres-workspace-token-32-characters',

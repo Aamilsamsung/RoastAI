@@ -470,3 +470,18 @@ def test_unknown_account_events_and_delivery_approval(client,monkeypatch):
     update({'enabled':True,'dry_run':False,'reply_delay_seconds':0})
     asyncio.run(process_job({'platform':'whatsapp','sender_id':'friend','sender_name':'','message_id':'safe','text':'hi'}))
     assert not calls
+
+
+@pytest.mark.parametrize('model,level',[('gemini-3.8-flash','LOW'),('gemini-3.5-flash-lite','MINIMAL')])
+def test_model_specific_thinking(model,level,monkeypatch):
+    from app import ai
+    from types import SimpleNamespace
+    class Client:
+        def __init__(self,**kwargs):self.models=self
+        def __enter__(self):return self
+        def __exit__(self,*args):pass
+        def generate_content(self,**kwargs):
+            assert kwargs['config'].thinking_config.thinking_level.value==level
+            return SimpleNamespace(text='REPLY: safe\nMEANING: safe')
+    monkeypatch.setattr(ai.genai,'Client',Client);monkeypatch.setattr(settings,'gemini_model',model);monkeypatch.setattr(settings,'gemini_api_key','test-key')
+    ai._gemini('safe')

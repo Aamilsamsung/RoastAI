@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     social_delivery_approved: bool = False
     rate_limit_per_minute: int = Field(20,ge=1,le=1000)
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-3.8-flash"
+    gemini_model: str = "gemini-3.5-flash-lite"
     ai_provider: Literal["gemini", "ollama"] = "gemini"
     ollama_base_url: str = "http://127.0.0.1:11434"
     ollama_model: str = "gemma4:4b"

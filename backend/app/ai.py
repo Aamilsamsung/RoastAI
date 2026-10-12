@@ -87,7 +87,7 @@ def _gemini(prompt):
     trace={'provider':'gemini','model':settings.gemini_model,'attempts':0,'input_tokens':None,'output_tokens':None,'thinking_tokens':None,'total_tokens':None}
     provider_trace.set(trace)
     thinking=(types.ThinkingConfig(thinking_budget=0) if settings.gemini_model.startswith('gemini-2.5')
-              else types.ThinkingConfig(thinking_level='low') if settings.gemini_model.startswith('gemini-3') else None)
+              else types.ThinkingConfig(thinking_level='minimal' if settings.gemini_model in ('gemini-3.5-flash-lite','gemini-3.1-flash-lite') else 'low') if settings.gemini_model.startswith('gemini-3') else None)
     for attempt in range(settings.ai_max_attempts):
         remaining=deadline-time.perf_counter()
         if remaining<=0: raise TimeoutError('AI request deadline exceeded')
@@ -97,6 +97,8 @@ def _gemini(prompt):
             options=types.HttpOptions(timeout=int(min(remaining,settings.ai_attempt_timeout_seconds)*1000),retry_options=types.HttpRetryOptions(attempts=1))
             with genai.Client(api_key=settings.gemini_api_key,http_options=options) as client:
                 response=client.models.generate_content(model=settings.gemini_model,contents=prompt,config=types.GenerateContentConfig(thinking_config=thinking,max_output_tokens=1536,temperature=0.8))
+            trace.pop('http_status',None)
+            trace['uncertain_attempts']=attempt
             usage=getattr(response,'usage_metadata',None)
             if usage:
                 for key,field in [('input_tokens','prompt_token_count'),('output_tokens','candidates_token_count'),('thinking_tokens','thoughts_token_count'),('total_tokens','total_token_count')]:

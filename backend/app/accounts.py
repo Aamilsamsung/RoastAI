@@ -47,6 +47,8 @@ def sign_in(credentials,register=False):
     return create_session(rows[0]['id'])
 
 def create_session(user_id):
+    # Ensure preference row exists before concurrent read/modify/write locks.
+    store.execute("INSERT INTO preferences(id,data) VALUES(:i,'{}') ON CONFLICT(id) DO NOTHING",i=user_id+1)
     store.execute('DELETE FROM sessions WHERE expires<:now',now=time.time())
     token=secrets.token_urlsafe(48)
     store.execute('INSERT INTO sessions(digest,user_id,expires) VALUES(:d,:u,:e)',d=hashlib.sha256(token.encode()).hexdigest(),u=user_id,e=time.time()+86400)

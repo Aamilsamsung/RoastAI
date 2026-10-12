@@ -220,8 +220,7 @@ def roast(x: RoastRequest,request:Request):
         payload={'detail':'Generation cancelled because bot settings changed.','request_id':rid,'status_code':409}
         store.finish_request(rid,payload);return JSONResponse(payload,status_code=409)
     response={'request_id':rid,'conversation_id':x.conversation_id,'timing':{'ai_ms':ai_ms},'usage':trace,'reply':reply,'english_meaning':meaning,'mode':cfg['roast_mode'],'intensity':cfg['intensity'],'input_language':x.input_language,'reply_language':x.reply_language,'script_mode':x.script_mode}
-    store.finish_request(rid,response,x.message,reply,x.conversation_id)
-    response['timing']['total_ms']=round((time.perf_counter()-started)*1000)
+    store.finish_request(rid,response,x.message,reply,x.conversation_id,started_at=started)
     logging.getLogger('uvicorn.error').info('Roast request_id=%s model=%s ai_ms=%d total_ms=%d input_tokens=%s output_tokens=%s thinking_tokens=%s attempts=%s',rid,trace.get('model'),ai_ms,response['timing']['total_ms'],trace.get('input_tokens'),trace.get('output_tokens'),trace.get('thinking_tokens'),trace.get('attempts'))
     return response
 @app.get('/api/activity')

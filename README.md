@@ -110,7 +110,7 @@ Root `.env.example` inventories everything. Runtime reads `backend/.env` locally
 | `CORS_ORIGINS` | Backend | Optional comma-separated exact origins; defaults to FRONTEND_URL | No |
 | `ADMIN_TOKEN` | Backend | Generated random token, at least 32 characters | **Yes** |
 | `GEMINI_API_KEY` | Backend | Google AI Studio key | **Yes** |
-| `GEMINI_MODEL` | Backend | `gemini-3.8-flash`; use a model enabled for your project | No |
+| `GEMINI_MODEL` | Backend | `gemini-3.5-flash-lite`; use a model enabled for your project | No |
 | `AI_PROVIDER` | Backend | `gemini` | No |
 | `AI_TIMEOUT_SECONDS` | Backend | `30` | No |
 | `RATE_LIMIT_PER_MINUTE` | Backend | `20` Studio generations per minute | No |
@@ -164,7 +164,7 @@ All available messages, activity, processed IDs, saved settings and webhook jobs
 
 ## 6. Gemini configuration
 
-Create your own key in Google AI Studio and set it on the backend only. Gemini is the default provider. Generation uses the Google SDK `models.generate_content`: one request asks for `REPLY:` and `MEANING:`, with low thinking and a 1536-token combined generation budget; visible comeback length remains bounded by the configured character limit. Gemini 2.5 Flash uses thinking_budget=0 if you select that model. A missing/blocked response, quota error, timeout or invalid format produces a sanitized UI error and audit event; no fake reply is substituted. Model access and billing depend on your Google project. Confirm your selected model supports the configured thinking control.
+Create your own key in Google AI Studio and set it on the backend only. Gemini is the default provider. Generation uses the Google SDK `models.generate_content`: one request asks for `REPLY:` and `MEANING:`, with minimal thinking for Flash-Lite (low for Gemini 3.8) and a 1536-token combined generation budget; visible comeback length remains bounded by the configured character limit. Gemini 2.5 Flash uses thinking_budget=0 if you select that model. A missing/blocked response, quota error, timeout or invalid format produces a sanitized UI error and audit event; no fake reply is substituted. Model access and billing depend on your Google project. Confirm your selected model supports the configured thinking control.
 
 Optional Ollama support remains, using a server-side reachable URL and bounded response timeout. An Ollama instance on your laptop is not accessible through Render's loopback address.
 
@@ -272,3 +272,7 @@ Facebook Page Messenger joins the existing official WhatsApp and Instagram webho
 Snapchat is listed with an explicit **Approval required** state. Its official Public Profile Messaging API supports approved brand–creator collaboration and needs a separate Snapchat allowlist; it does not support ordinary friend DMs or a general Snapchat roast bot. No unsupported automation is used. `SNAPCHAT_ACCESS_TOKEN` (secret) and `SNAPCHAT_PROFILE_ID` enable the owner-only collaboration card in Platforms. Enter a creator Public Profile UUID to load the latest 50 messages or send one collaboration message. Start the bot before sending; dry-run previews without delivery, and emergency stop blocks sending. This is a manual approved collaboration tool; it does not auto-reply to ordinary DMs. Token renewal and Snapchat allowlist approval remain external requirements.
 
 Reply latency diagnostics: successful Studio responses include `timing.ai_ms` and `timing.total_ms`. Logs contain only durations, without user text or credentials. AI timing includes loading recent context and provider generation; total includes settings, safety checks and persistence. Browser/network and Render wake-up time are outside these server durations. Answers now leave the loading state before history/dashboard refresh completes.
+
+## Audit and handover
+
+See `docs/handover/ARCHITECTURE.md`, `OPERATIONS.md`, `COSTS.md`, and `DEPENDENCY-LICENCES.md` for reliability boundaries, setup, backup/restore, external integration blockers, costs and transfer checklist. SOCIAL_DELIVERY_APPROVED=false enforces dry-run; no live delivery was enabled by this audit. New Studio conversations are separate threads; legacy history remains. Successful/failed responses carry request IDs, and errors remain visible until dismissed. Provider health is a recent generation observation, not credential presence.
