@@ -1,0 +1,16 @@
+{
+  "live_cases": 46,
+  "passed": 46,
+  "provider_median_seconds": 1.1885,
+  "provider_range_seconds": [
+    0.878,
+    4.372
+  ],
+  "test_client_wall_median_seconds": 1.5855000000000001,
+  "test_client_wall_range_seconds": [
+    1.314,
+    15.469
+  ],
+  "mean_input_tokens": 211.32608695652175,
+  "mean_total_tokens": 256.54347826086956
+}

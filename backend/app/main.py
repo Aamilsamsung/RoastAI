@@ -208,7 +208,8 @@ def roast(x: RoastRequest,request:Request):
         reply,meaning=generate_with_meaning(x.message,SimpleNamespace(**cfg),x.sender_name,store.recent('local',x.conversation_id),x.input_language,x.reply_language,x.script_mode)
     except Exception as error:
         trace=provider_trace.get() or {};code=getattr(error,'code',None);detail=provider_error_detail(error)
-        evidence={'status':'unavailable','model':settings.gemini_model,'checked_at':time.time(),'request_id':rid,'http_status':code if isinstance(code,int) else None,'error_type':type(error).__name__}
+        failure_status='rate_limited' if code==429 else 'setup_error' if code in (400,401,403,404) else 'unavailable'
+        evidence={'status':failure_status,'model':settings.gemini_model,'checked_at':time.time(),'request_id':rid,'http_status':code if isinstance(code,int) else None,'error_type':type(error).__name__}
         store.record_provider(evidence)
         payload={'detail':detail,'request_id':rid,'provider_status':evidence['http_status'],'attempts':trace.get('attempts',0),'status_code':502}
         store.finish_request(rid,payload);store.log('ERROR',detail+' · request '+rid)

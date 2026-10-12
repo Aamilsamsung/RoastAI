@@ -422,7 +422,7 @@
   {
     "ecosystem": "python",
     "name": "pip",
-    "version": "25.0.1",
+    "version": "26.2.1",
     "licence": "MIT"
   },
   {

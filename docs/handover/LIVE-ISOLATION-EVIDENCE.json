@@ -1,0 +1,16 @@
+{
+  "checks": [
+    "anonymous settings rejected",
+    "invalid bearer rejected",
+    "second QA account signup",
+    "B cannot read A exact conversation ID",
+    "B sees no A conversations",
+    "B sees no A activity",
+    "friend cannot start social bot",
+    "friend cannot access owner Snapchat API",
+    "B has independent default preferences",
+    "logout accepted",
+    "logout revokes bearer server-side"
+  ],
+  "google_configured": false
+}

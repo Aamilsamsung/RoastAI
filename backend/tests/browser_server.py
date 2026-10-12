@@ -1,6 +1,9 @@
 """LOCAL browser test fixture only; never deployed as the application entry point."""
 import os,pathlib,json
 os.environ.update(DATABASE_URL='sqlite:////workspace/scratch/961ec7ba67e2/RoastAI/backend/tests/browser-fixture.db',ENVIRONMENT='test',ADMIN_TOKEN='qa-owner-only-local-test-token-32chars',FRONTEND_URL='http://127.0.0.1:8124')
+# Reset only the explicitly disposable browser fixture database.
+fixture=pathlib.Path(__file__).resolve().parent/'browser-fixture.db'
+fixture.unlink(missing_ok=True)
 from app import main,store,ai
 store.init_db()
 def local_fixture(message,cfg,*args):

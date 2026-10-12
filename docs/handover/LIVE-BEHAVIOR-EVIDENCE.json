@@ -1,0 +1,2432 @@
+{
+  "prompt": "You are late to the meeting again.",
+  "results": [
+    {
+      "case": "mode-normal",
+      "http": 200,
+      "wall_seconds": 15.469,
+      "settings": {
+        "roast_mode": "normal",
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "49dabc29-daf6-4942-92e5-c08e012672e9",
+        "conversation_id": "qa-4ef0022444654b22aa8516e14368337a",
+        "timing": {
+          "ai_ms": 2374,
+          "total_ms": 2384
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 211,
+          "output_tokens": 39,
+          "thinking_tokens": null,
+          "total_tokens": 250,
+          "uncertain_attempts": 0,
+          "latency_ms": 2364
+        },
+        "reply": "Bro, I am not late, I am just building anticipation like a true superstar.",
+        "english_meaning": "I am not late, I am just arriving dramatically to make an entrance.",
+        "mode": "normal",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "english",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "mode-funny",
+      "http": 200,
+      "wall_seconds": 10.228,
+      "settings": {
+        "roast_mode": "funny",
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "1d6b468c-b942-4341-82dc-c1279783aed6",
+        "conversation_id": "qa-7caf61c6a8524fea83b26533abe579e7",
+        "timing": {
+          "ai_ms": 1100,
+          "total_ms": 1112
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 213,
+          "output_tokens": 35,
+          "thinking_tokens": null,
+          "total_tokens": 248,
+          "uncertain_attempts": 0,
+          "latency_ms": 1089
+        },
+        "reply": "Bro, even Internet Explorer loads faster than your sense of time!",
+        "english_meaning": "You are extremely slow to arrive, just like the notoriously slow web browser.",
+        "mode": "funny",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "english",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "mode-sarcastic",
+      "http": 200,
+      "wall_seconds": 13.63,
+      "settings": {
+        "roast_mode": "sarcastic",
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "48cd1265-ab0b-4302-9e1e-e3f0572b1c31",
+        "conversation_id": "qa-7ba6892b3f9c4c27b12c10fd443922d8",
+        "timing": {
+          "ai_ms": 4372,
+          "total_ms": 4386
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 211,
+          "output_tokens": 46,
+          "thinking_tokens": null,
+          "total_tokens": 257,
+          "uncertain_attempts": 0,
+          "latency_ms": 4364
+        },
+        "reply": "Oh look, time management finally decided to ghost you too. Did you bring snacks or just more excuses?",
+        "english_meaning": "You are pointing out my tardiness while being chronically flaky yourself, probably empty-handed.",
+        "mode": "sarcastic",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "english",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "mode-savage",
+      "http": 200,
+      "wall_seconds": 10.163,
+      "settings": {
+        "roast_mode": "savage",
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "83a927a4-2730-44f3-a6a1-aa6607373ac8",
+        "conversation_id": "qa-f58af645c3e049488cbf51deffe6de60",
+        "timing": {
+          "ai_ms": 1061,
+          "total_ms": 1079
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 212,
+          "output_tokens": 41,
+          "thinking_tokens": null,
+          "total_tokens": 253,
+          "uncertain_attempts": 0,
+          "latency_ms": 1053
+        },
+        "reply": "Fashionably late is my brand, but hey, at least I brought the personality this time.",
+        "english_meaning": "I arrive late on purpose because my charisma makes up for my bad timing.",
+        "mode": "savage",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "english",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "mode-brutal",
+      "http": 200,
+      "wall_seconds": 1.484,
+      "settings": {
+        "roast_mode": "brutal",
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "07928f1d-8483-4713-b02a-346ab9a624a7",
+        "conversation_id": "qa-bf15ae7bac3b4c6d8ab7fc949e93b34e",
+        "timing": {
+          "ai_ms": 1186,
+          "total_ms": 1198
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 213,
+          "output_tokens": 42,
+          "thinking_tokens": null,
+          "total_tokens": 255,
+          "uncertain_attempts": 0,
+          "latency_ms": 1178
+        },
+        "reply": "Bro, you act like my absence is the only thing keeping this meeting from being completely useless.",
+        "english_meaning": "My being late isn't the real problem; this meeting is pointless anyway.",
+        "mode": "brutal",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "english",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "mode-deadpan",
+      "http": 200,
+      "wall_seconds": 1.544,
+      "settings": {
+        "roast_mode": "deadpan",
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "5affff45-5939-406e-a0a3-440d6b030d39",
+        "conversation_id": "qa-5ae35de0575e40eaa4b2adb2e6c107b5",
+        "timing": {
+          "ai_ms": 1109,
+          "total_ms": 1120
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 211,
+          "output_tokens": 35,
+          "thinking_tokens": null,
+          "total_tokens": 246,
+          "uncertain_attempts": 0,
+          "latency_ms": 1101
+        },
+        "reply": "Timekeeping is just a concept, much like your grasp of the agenda.",
+        "english_meaning": "I lack punctuality, but you lack any meaningful contribution anyway.",
+        "mode": "deadpan",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "english",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "mode-intelligent",
+      "http": 200,
+      "wall_seconds": 1.66,
+      "settings": {
+        "roast_mode": "intelligent",
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "109703a7-4444-490b-8c53-c15dd12e9a0a",
+        "conversation_id": "qa-7df8eb902c9d4186844aedddae758ed7",
+        "timing": {
+          "ai_ms": 1148,
+          "total_ms": 1224
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 212,
+          "output_tokens": 39,
+          "thinking_tokens": null,
+          "total_tokens": 251,
+          "uncertain_attempts": 0,
+          "latency_ms": 1132
+        },
+        "reply": "Fashionably late is my brand, but your punctuality is just fashion-free.",
+        "english_meaning": "I arrive late with style, while your obsession with time lacks any flair.",
+        "mode": "intelligent",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "english",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "mode-respectful",
+      "http": 200,
+      "wall_seconds": 1.956,
+      "settings": {
+        "roast_mode": "respectful",
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "60f54fe8-c753-484f-9275-26821beb1c9e",
+        "conversation_id": "qa-6cb0b66c80a1410f9002dff9dcd7e7f0",
+        "timing": {
+          "ai_ms": 1191,
+          "total_ms": 1422
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 215,
+          "output_tokens": 42,
+          "thinking_tokens": null,
+          "total_tokens": 257,
+          "uncertain_attempts": 0,
+          "latency_ms": 1181
+        },
+        "reply": "If being fashionably late was an Olympic sport, you would still find a way to miss the podium.",
+        "english_meaning": "Even with extra time to prepare, you still manage to fall behind.",
+        "mode": "respectful",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "english",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "mode-vulgar",
+      "http": 200,
+      "wall_seconds": 1.417,
+      "settings": {
+        "roast_mode": "vulgar",
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "2eefaae0-4d63-4c80-9dd8-ecba1376a8d2",
+        "conversation_id": "qa-36e8ffc8c6e74a09a8db8ccf0896550f",
+        "timing": {
+          "ai_ms": 1033,
+          "total_ms": 1055
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 215,
+          "output_tokens": 48,
+          "thinking_tokens": null,
+          "total_tokens": 263,
+          "uncertain_attempts": 0,
+          "latency_ms": 1025
+        },
+        "reply": "You've been staring at that blank spreadsheet for an hour, but sure, blame my arrival for your lack of productivity.",
+        "english_meaning": "You are hypocritical to complain about my punctuality when you accomplish nothing yourself.",
+        "mode": "vulgar",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "english",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "intensity-1",
+      "http": 200,
+      "wall_seconds": 1.588,
+      "settings": {
+        "intensity": 1,
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "6eedda52-86fc-41ec-8f5c-56443245a496",
+        "conversation_id": "qa-7f66b716b2f74b8e9b465fe7af58d0b9",
+        "timing": {
+          "ai_ms": 1256,
+          "total_ms": 1270
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 212,
+          "output_tokens": 45,
+          "thinking_tokens": null,
+          "total_tokens": 257,
+          "uncertain_attempts": 0,
+          "latency_ms": 1240
+        },
+        "reply": "Fashionably late is my personal brand, and frankly, the meeting couldn't start without the star.",
+        "english_meaning": "I arrived late on purpose because I think I'm the most important person here.",
+        "mode": "savage",
+        "intensity": 1,
+        "input_language": "english",
+        "reply_language": "english",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "intensity-2",
+      "http": 200,
+      "wall_seconds": 1.404,
+      "settings": {
+        "intensity": 2,
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "131c01d4-7f98-4a15-b990-73eba32b29f1",
+        "conversation_id": "qa-d9cbe24e36eb4b948aa401e6b84443de",
+        "timing": {
+          "ai_ms": 1120,
+          "total_ms": 1129
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 212,
+          "output_tokens": 33,
+          "thinking_tokens": null,
+          "total_tokens": 245,
+          "uncertain_attempts": 0,
+          "latency_ms": 1109
+        },
+        "reply": "I am not late, I was just building suspense for my grand entrance.",
+        "english_meaning": "I was intentionally tardy to make a dramatic impression.",
+        "mode": "savage",
+        "intensity": 2,
+        "input_language": "english",
+        "reply_language": "english",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "intensity-3",
+      "http": 200,
+      "wall_seconds": 1.376,
+      "settings": {
+        "intensity": 3,
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "386eb16f-da8e-4136-b89b-afadbc36d759",
+        "conversation_id": "qa-647e5b993dcf45e59afe398c91379df5",
+        "timing": {
+          "ai_ms": 939,
+          "total_ms": 951
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 212,
+          "output_tokens": 33,
+          "thinking_tokens": null,
+          "total_tokens": 245,
+          "uncertain_attempts": 0,
+          "latency_ms": 930
+        },
+        "reply": "I am not late, I am just arriving with dramatic timing.",
+        "english_meaning": "I am not late, I am just making a dramatic entrance.",
+        "mode": "savage",
+        "intensity": 3,
+        "input_language": "english",
+        "reply_language": "english",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "intensity-4",
+      "http": 200,
+      "wall_seconds": 1.508,
+      "settings": {
+        "intensity": 4,
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "a9bee482-9b7f-402e-a1b0-c67f9e40bdda",
+        "conversation_id": "qa-c99320c5112843cfbb72efe7fd381d9f",
+        "timing": {
+          "ai_ms": 1071,
+          "total_ms": 1087
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 212,
+          "output_tokens": 44,
+          "thinking_tokens": null,
+          "total_tokens": 256,
+          "uncertain_attempts": 0,
+          "latency_ms": 1061
+        },
+        "reply": "Fashionably late is my brand, I just wanted to make sure you all had time to miss me.",
+        "english_meaning": "I arrive late on purpose because my presence is valued and missed by the team.",
+        "mode": "savage",
+        "intensity": 4,
+        "input_language": "english",
+        "reply_language": "english",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "intensity-5",
+      "http": 200,
+      "wall_seconds": 1.704,
+      "settings": {
+        "intensity": 5,
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "e9018986-6f8d-4cc6-9836-73726647e99b",
+        "conversation_id": "qa-30c1e71071ac4c0cb4596659691b8068",
+        "timing": {
+          "ai_ms": 1211,
+          "total_ms": 1220
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 212,
+          "output_tokens": 41,
+          "thinking_tokens": null,
+          "total_tokens": 253,
+          "uncertain_attempts": 0,
+          "latency_ms": 1103
+        },
+        "reply": "Fashionably late is my brand, but hey, at least I brought the personality this time.",
+        "english_meaning": "I arrive late on purpose because my charm makes up for my bad timing.",
+        "mode": "savage",
+        "intensity": 5,
+        "input_language": "english",
+        "reply_language": "english",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "intensity-6",
+      "http": 200,
+      "wall_seconds": 1.314,
+      "settings": {
+        "intensity": 6,
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "3c060c90-5f18-4591-8eb8-749b6deb459c",
+        "conversation_id": "qa-8a5e92c091584c1080c09e3443b2008b",
+        "timing": {
+          "ai_ms": 878,
+          "total_ms": 887
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 212,
+          "output_tokens": 37,
+          "thinking_tokens": null,
+          "total_tokens": 249,
+          "uncertain_attempts": 0,
+          "latency_ms": 859
+        },
+        "reply": "Fashionably late is my brand, but your personality is still stuck in beta.",
+        "english_meaning": "I arrive late with style, whereas your character is underdeveloped and boring.",
+        "mode": "savage",
+        "intensity": 6,
+        "input_language": "english",
+        "reply_language": "english",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "intensity-7",
+      "http": 200,
+      "wall_seconds": 1.48,
+      "settings": {
+        "intensity": 7,
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "dde8fcf9-b290-4ccb-b6ba-18f66734a3fe",
+        "conversation_id": "qa-d75dad51b5f84b2c93afef486ac47b29",
+        "timing": {
+          "ai_ms": 1045,
+          "total_ms": 1054
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 212,
+          "output_tokens": 41,
+          "thinking_tokens": null,
+          "total_tokens": 253,
+          "uncertain_attempts": 0,
+          "latency_ms": 1038
+        },
+        "reply": "Fashionably late is my brand, but hey, at least I brought the personality this time.",
+        "english_meaning": "I arrive late on purpose because my charm makes up for my bad timing.",
+        "mode": "savage",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "english",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "intensity-8",
+      "http": 200,
+      "wall_seconds": 1.556,
+      "settings": {
+        "intensity": 8,
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "981bcc34-160f-4356-ba77-f9877e8fda32",
+        "conversation_id": "qa-7a145e96cfea4c1491aec10eec67bed3",
+        "timing": {
+          "ai_ms": 1125,
+          "total_ms": 1136
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 212,
+          "output_tokens": 45,
+          "thinking_tokens": null,
+          "total_tokens": 257,
+          "uncertain_attempts": 0,
+          "latency_ms": 1118
+        },
+        "reply": "Sorry, I was busy finding a personality that actually makes people want to talk to me.",
+        "english_meaning": "Apologies, I was occupied searching for an engaging personality that makes others want to interact with me.",
+        "mode": "savage",
+        "intensity": 8,
+        "input_language": "english",
+        "reply_language": "english",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "intensity-9",
+      "http": 200,
+      "wall_seconds": 1.868,
+      "settings": {
+        "intensity": 9,
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "8ae81e51-eecd-4f37-9019-1a8642dd2959",
+        "conversation_id": "qa-fbe0fad906d54036864efb6651ab2b70",
+        "timing": {
+          "ai_ms": 1433,
+          "total_ms": 1450
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 212,
+          "output_tokens": 47,
+          "thinking_tokens": null,
+          "total_tokens": 259,
+          "uncertain_attempts": 0,
+          "latency_ms": 1413
+        },
+        "reply": "I'm not late, I just wanted to give you all a little extra time to miss my brilliance.",
+        "english_meaning": "I arrived behind schedule because my presence is so valuable you needed a warm-up period.",
+        "mode": "savage",
+        "intensity": 9,
+        "input_language": "english",
+        "reply_language": "english",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "intensity-10",
+      "http": 200,
+      "wall_seconds": 1.668,
+      "settings": {
+        "intensity": 10,
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "05da47f6-eb0f-47b0-9066-f1d63a99801a",
+        "conversation_id": "qa-ab65a63556c64b5dbe4459ca11213533",
+        "timing": {
+          "ai_ms": 1348,
+          "total_ms": 1365
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 213,
+          "output_tokens": 42,
+          "thinking_tokens": null,
+          "total_tokens": 255,
+          "uncertain_attempts": 0,
+          "latency_ms": 1337
+        },
+        "reply": "I am not late, I just wanted to save everyone the misery of your introduction.",
+        "english_meaning": "I arrived intentionally after you started so people would not have to suffer through your opening remarks.",
+        "mode": "savage",
+        "intensity": 10,
+        "input_language": "english",
+        "reply_language": "english",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "profanity-off",
+      "http": 200,
+      "wall_seconds": 2.28,
+      "settings": {
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "edf74859-e195-48a9-b02d-719956dd080f",
+        "conversation_id": "qa-97228326e996420488a20ff535046423",
+        "timing": {
+          "ai_ms": 1843,
+          "total_ms": 1855
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 212,
+          "output_tokens": 41,
+          "thinking_tokens": null,
+          "total_tokens": 253,
+          "uncertain_attempts": 0,
+          "latency_ms": 1835
+        },
+        "reply": "Fashionably late is my brand, but hey, at least I brought the personality this time.",
+        "english_meaning": "I arrive late on purpose because my charisma makes up for my bad timing.",
+        "mode": "savage",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "english",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "custom-voice",
+      "http": 200,
+      "wall_seconds": 1.849,
+      "settings": {
+        "custom_instructions": "Speak like a dry librarian. Mention books or overdue returns.",
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "d6c2d50a-07fd-43bc-8845-767e7dbf57a6",
+        "conversation_id": "qa-be4ad2f7607248bcb3f62476aabe4032",
+        "timing": {
+          "ai_ms": 1421,
+          "total_ms": 1431
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 222,
+          "output_tokens": 53,
+          "thinking_tokens": null,
+          "total_tokens": 275,
+          "uncertain_attempts": 0,
+          "latency_ms": 1409
+        },
+        "reply": "Punctuality is a rare volume in your library, apparently, and just like your overdue fines, this tardiness is accumulating interest.",
+        "english_meaning": "You are always late, much like your overdue books, and it is becoming a persistent problem.",
+        "mode": "savage",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "english",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true,
+        "voice_cue_present": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "length-50",
+      "http": 200,
+      "wall_seconds": 1.716,
+      "settings": {
+        "max_reply_length": 50,
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "09ac71a0-ed70-4002-a144-c6aee6f8731d",
+        "conversation_id": "qa-ee5460437fd44d4e91511a0849c2792f",
+        "timing": {
+          "ai_ms": 1291,
+          "total_ms": 1304
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 211,
+          "output_tokens": 28,
+          "thinking_tokens": null,
+          "total_tokens": 239,
+          "uncertain_attempts": 0,
+          "latency_ms": 1283
+        },
+        "reply": "Time flies when you are avoiding me.",
+        "english_meaning": "Time passes quickly when you are trying to stay away from me.",
+        "mode": "savage",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "english",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "profanity-light",
+      "http": 200,
+      "wall_seconds": 1.472,
+      "settings": {
+        "profanity_level": "light"
+      },
+      "response": {
+        "request_id": "1dff40ee-036a-47cf-982f-9558752b0c97",
+        "conversation_id": "qa-66628692ba0b4f5da8b20be82d842889",
+        "timing": {
+          "ai_ms": 1174,
+          "total_ms": 1182
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 213,
+          "output_tokens": 51,
+          "thinking_tokens": null,
+          "total_tokens": 264,
+          "uncertain_attempts": 0,
+          "latency_ms": 1167
+        },
+        "reply": "Bro, I'm not late, I'm just dramatically staging my grand entrance so y'all actually pay attention for once.",
+        "english_meaning": "I arrived late on purpose to make a dramatic entrance and get people's attention.",
+        "mode": "savage",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "english",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "profanity-heavy",
+      "http": 200,
+      "wall_seconds": 1.786,
+      "settings": {
+        "profanity_level": "heavy"
+      },
+      "response": {
+        "request_id": "db920012-9a01-4a9f-ae54-cfe8972578eb",
+        "conversation_id": "qa-301974cf91fd409b9cf7f8b3b41f22ee",
+        "timing": {
+          "ai_ms": 1327,
+          "total_ms": 1337
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 214,
+          "output_tokens": 66,
+          "thinking_tokens": null,
+          "total_tokens": 280,
+          "uncertain_attempts": 0,
+          "latency_ms": 1318
+        },
+        "reply": "Oh look who's crying about time management like a little bitch. Maybe if your personality wasn't so fucking boring, people wouldn't mind waiting for you to shut up.",
+        "english_meaning": "Complaining about being late is rich coming from someone whose entire existence is a waste of everyone's time.",
+        "mode": "savage",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "english",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "length-300",
+      "http": 200,
+      "wall_seconds": 1.661,
+      "settings": {
+        "max_reply_length": 300,
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "d280b653-faee-4185-a3fb-c3b152eaa725",
+        "conversation_id": "qa-6ca3b5945c324864b941059af0751e1d",
+        "timing": {
+          "ai_ms": 1232,
+          "total_ms": 1240
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 212,
+          "output_tokens": 38,
+          "thinking_tokens": null,
+          "total_tokens": 250,
+          "uncertain_attempts": 0,
+          "latency_ms": 1222
+        },
+        "reply": "Fashionably late is my brand, but your personality is permanently out of style.",
+        "english_meaning": "I arrive late with style, whereas your character is consistently unappealing.",
+        "mode": "savage",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "english",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "length-1000",
+      "http": 200,
+      "wall_seconds": 1.752,
+      "settings": {
+        "max_reply_length": 1000,
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "a3e51d8a-f64b-463a-86b5-d17d4fb6392c",
+        "conversation_id": "qa-c6ac088c84994bd0bc9db422de2647a7",
+        "timing": {
+          "ai_ms": 1316,
+          "total_ms": 1327
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 213,
+          "output_tokens": 52,
+          "thinking_tokens": null,
+          "total_tokens": 265,
+          "uncertain_attempts": 0,
+          "latency_ms": 1298
+        },
+        "reply": "Relax, I just wanted to give everyone else a fighting chance to look prepared before I arrived.",
+        "english_meaning": "Calm down, I only showed up late so the rest of you had a chance to look like you knew what you were doing.",
+        "mode": "savage",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "english",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "language-english-roman",
+      "http": 200,
+      "wall_seconds": 1.583,
+      "settings": {
+        "reply_language": "english",
+        "script_mode": "roman",
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "6c55540a-2585-4045-bd04-7316e4b44cae",
+        "conversation_id": "qa-8ddf8a07811c45cda4592423c99dfe23",
+        "timing": {
+          "ai_ms": 1278,
+          "total_ms": 1291
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 212,
+          "output_tokens": 37,
+          "thinking_tokens": null,
+          "total_tokens": 249,
+          "uncertain_attempts": 0,
+          "latency_ms": 1269
+        },
+        "reply": "Fashionably late is my brand, but your personality is stuck in the past.",
+        "english_meaning": "I arrive late with style, whereas your character is outdated and boring.",
+        "mode": "savage",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "english",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "language-english-native",
+      "http": 200,
+      "wall_seconds": 1.561,
+      "settings": {
+        "reply_language": "english",
+        "script_mode": "native",
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "097061d0-fcfe-46ca-b5f1-a5182fdd7e82",
+        "conversation_id": "qa-96e13fc7762b42eeabfbb620e43fb026",
+        "timing": {
+          "ai_ms": 1278,
+          "total_ms": 1287
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 207,
+          "output_tokens": 44,
+          "thinking_tokens": null,
+          "total_tokens": 251,
+          "uncertain_attempts": 0,
+          "latency_ms": 1270
+        },
+        "reply": "I'm not late, I just prefer to make a grand entrance after the boring part is over.",
+        "english_meaning": "I arrived after the meeting started because I wanted to avoid the dull opening topics.",
+        "mode": "savage",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "english",
+        "script_mode": "native"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "language-hindi-roman",
+      "http": 200,
+      "wall_seconds": 1.473,
+      "settings": {
+        "reply_language": "hindi",
+        "script_mode": "roman",
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "80d58ac1-d808-4d31-82e9-6b110564f352",
+        "conversation_id": "qa-2ea9e34ea36c47849b03735e5f71ac45",
+        "timing": {
+          "ai_ms": 1041,
+          "total_ms": 1049
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 212,
+          "output_tokens": 34,
+          "thinking_tokens": null,
+          "total_tokens": 246,
+          "uncertain_attempts": 0,
+          "latency_ms": 1032
+        },
+        "reply": "Time par aana shayad aapke syllabus mein nahi tha.",
+        "english_meaning": "Showing up on time must not have been part of your syllabus.",
+        "mode": "savage",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "hindi",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true,
+        "script_matches": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "language-hindi-native",
+      "http": 200,
+      "wall_seconds": 1.422,
+      "settings": {
+        "reply_language": "hindi",
+        "script_mode": "native",
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "3a8719f9-f9ec-4183-94dc-c1c5150b5099",
+        "conversation_id": "qa-e42e7faa66b14fddbcae8e627b79365d",
+        "timing": {
+          "ai_ms": 1051,
+          "total_ms": 1061
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 207,
+          "output_tokens": 50,
+          "thinking_tokens": null,
+          "total_tokens": 257,
+          "uncertain_attempts": 0,
+          "latency_ms": 1037
+        },
+        "reply": "\u092e\u0940\u091f\u093f\u0902\u0917 \u0915\u093e \u0938\u092e\u092f \u092a\u0930 \u0906\u0928\u093e \u0924\u0947\u0930\u0940 \u0906\u0926\u0924 \u092e\u0947\u0902 \u0928\u0939\u0940\u0902, \u092f\u093e \u0918\u0921\u093c\u0940 \u0926\u0947\u0916\u0928\u093e \u0905\u092d\u0940 \u0924\u0915 \u0938\u0940\u0916\u093e \u0928\u0939\u0940\u0902?",
+        "english_meaning": "Being on time for meetings isn't in your habit, or haven't you learned how to read a clock yet?",
+        "mode": "savage",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "hindi",
+        "script_mode": "native"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true,
+        "script_matches": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "language-kannada-roman",
+      "http": 200,
+      "wall_seconds": 1.863,
+      "settings": {
+        "reply_language": "kannada",
+        "script_mode": "roman",
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "4d40e0f1-1aab-4926-bb6f-ce20c69050e7",
+        "conversation_id": "qa-c02b93ca967540e4a3a6201ee3ac4c81",
+        "timing": {
+          "ai_ms": 1424,
+          "total_ms": 1435
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 212,
+          "output_tokens": 54,
+          "thinking_tokens": null,
+          "total_tokens": 266,
+          "uncertain_attempts": 0,
+          "latency_ms": 1417
+        },
+        "reply": "Neenu thumba jaldi bandbitta, adike naanu swalpa late aade, match madokke!",
+        "english_meaning": "You arrived way too early, so I came a bit late just to match your overachieving speed!",
+        "mode": "savage",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "kannada",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true,
+        "script_matches": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "language-kannada-native",
+      "http": 200,
+      "wall_seconds": 2.025,
+      "settings": {
+        "reply_language": "kannada",
+        "script_mode": "native",
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "11f08447-3dbc-4ce5-b7cd-d255b08efd83",
+        "conversation_id": "qa-9c93abf29cf646019794e5dafcba641c",
+        "timing": {
+          "ai_ms": 1594,
+          "total_ms": 1602
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 207,
+          "output_tokens": 59,
+          "thinking_tokens": null,
+          "total_tokens": 266,
+          "uncertain_attempts": 0,
+          "latency_ms": 1584
+        },
+        "reply": "\u0cb8\u0ccc\u0cb0\u0cae\u0c82\u0ca1\u0cb2\u0ca6\u0cb2\u0ccd\u0cb2\u0cc7 \u0cb8\u0cc1\u0ca4\u0ccd\u0ca4\u0cbf \u0cac\u0c82\u0ca6\u0cc6\u0ca8\u0cbe \u0c95\u0cc7\u0cb3\u0ccb\u0c95\u0cc6, \u0ca8\u0cc0\u0ca8\u0cc7\u0ca8\u0cc1 \u0c85\u0cb7\u0ccd\u0c9f\u0cc1 \u0ca6\u0cca\u0ca1\u0ccd\u0ca1 \u0cb8\u0cc6\u0cb2\u0cc6\u0cac\u0ccd\u0cb0\u0cbf\u0c9f\u0cbf\u0ca8\u0cbe?",
+        "english_meaning": "Did I come back orbiting the solar system for you to ask, are you some kind of big celebrity?",
+        "mode": "savage",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "kannada",
+        "script_mode": "native"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true,
+        "script_matches": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "language-malayalam-roman",
+      "http": 200,
+      "wall_seconds": 1.695,
+      "settings": {
+        "reply_language": "malayalam",
+        "script_mode": "roman",
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "5a6ef34e-f1e9-4340-a13d-7e8d630e432b",
+        "conversation_id": "qa-e053a1fafbc34558ba0a060417214d24",
+        "timing": {
+          "ai_ms": 1242,
+          "total_ms": 1250
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 212,
+          "output_tokens": 48,
+          "thinking_tokens": null,
+          "total_tokens": 260,
+          "uncertain_attempts": 0,
+          "latency_ms": 1234
+        },
+        "reply": "Nee varumbol meeting mudiyumayirunnu, njan alle athu thadanjathu!",
+        "english_meaning": "The meeting would have ended by the time you arrived, it was me who stopped that!",
+        "mode": "savage",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "malayalam",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true,
+        "script_matches": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "language-malayalam-native",
+      "http": 200,
+      "wall_seconds": 1.452,
+      "settings": {
+        "reply_language": "malayalam",
+        "script_mode": "native",
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "ec50d9e1-aebe-4c44-8b63-a31175858963",
+        "conversation_id": "qa-44a2bcde60c640708bac99377c906f76",
+        "timing": {
+          "ai_ms": 1017,
+          "total_ms": 1026
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 207,
+          "output_tokens": 52,
+          "thinking_tokens": null,
+          "total_tokens": 259,
+          "uncertain_attempts": 0,
+          "latency_ms": 1008
+        },
+        "reply": "\u0d2f\u0d4b\u0d17\u0d02 \u0d24\u0d41\u0d1f\u0d19\u0d4d\u0d19\u0d41\u0d02 \u0d2e\u0d41\u0d7b\u0d2a\u0d4d \u0d35\u0d30\u0d3e\u0d7b \u0d0e\u0d28\u0d3f\u0d15\u0d4d\u0d15\u0d4d \u0d28\u0d3f\u0d19\u0d4d\u0d19\u0d33\u0d46\u0d2a\u0d4d\u0d2a\u0d4b\u0d32\u0d46 \u0d35\u0d46\u0d31\u0d41\u0d24\u0d46\u0d2f\u0d3f\u0d30\u0d3f\u0d15\u0d4d\u0d15\u0d3e\u0d7b \u0d38\u0d2e\u0d2f\u0d2e\u0d3f\u0d32\u0d4d\u0d32\u0d32\u0d4d\u0d32\u0d4b!",
+        "english_meaning": "Unlike you, I don't have all day to sit around doing nothing before meetings start!",
+        "mode": "savage",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "malayalam",
+        "script_mode": "native"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true,
+        "script_matches": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "language-tamil-roman",
+      "http": 200,
+      "wall_seconds": 1.686,
+      "settings": {
+        "reply_language": "tamil",
+        "script_mode": "roman",
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "5d3d4172-4fd0-4ac5-b042-670ef3ae71c3",
+        "conversation_id": "qa-789edab7037c41a59e4affab3b4fe4d2",
+        "timing": {
+          "ai_ms": 1333,
+          "total_ms": 1409
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 212,
+          "output_tokens": 55,
+          "thinking_tokens": null,
+          "total_tokens": 267,
+          "uncertain_attempts": 0,
+          "latency_ms": 1322
+        },
+        "reply": "Neenga romba early-ah vandhu enna periya achievement panniteenga? Konjam ore level-ah irunga boss!",
+        "english_meaning": "Did you achieve something huge by coming super early? Calm down and stay at my level, boss!",
+        "mode": "savage",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "tamil",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true,
+        "script_matches": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "language-tamil-native",
+      "http": 200,
+      "wall_seconds": 1.51,
+      "settings": {
+        "reply_language": "tamil",
+        "script_mode": "native",
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "fea126ac-b1d3-4389-a88e-fcc4d7d23fde",
+        "conversation_id": "qa-3ae872d48249406491d90a4a0a273543",
+        "timing": {
+          "ai_ms": 1076,
+          "total_ms": 1085
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 207,
+          "output_tokens": 57,
+          "thinking_tokens": null,
+          "total_tokens": 264,
+          "uncertain_attempts": 0,
+          "latency_ms": 1064
+        },
+        "reply": "\u0bae\u0bc0\u0b9f\u0bcd\u0b9f\u0bbf\u0b99\u0bcd\u0b95\u0bc1\u0b95\u0bcd\u0b95\u0bc1 \u0bb2\u0bc7\u0b9f\u0bcd\u0b9f\u0bbe \u0bb5\u0bb0\u0bcd\u0bb1\u0ba4\u0bc1\u0b95\u0bcd\u0b95\u0bc1 \u0ba8\u0bbe\u0ba9\u0bcd \u0b92\u0ba9\u0bcd\u0ba9\u0bc1\u0bae\u0bcd \u0b89\u0b99\u0bcd\u0b95\u0bb3 \u0bae\u0bbe\u0ba4\u0bbf\u0bb0\u0bbf \u0b9a\u0bc1\u0bae\u0bcd\u0bae\u0bbe \u0b87\u0bb0\u0bc1\u0b95\u0bcd\u0b95\u0bb1\u0bb5\u0ba9\u0bcd \u0b87\u0bb2\u0bcd\u0bb2, \u0bb5\u0bc7\u0bb2\u0bc8 \u0b87\u0bb0\u0bc1\u0b95\u0bcd\u0b95\u0bb1\u0bb5\u0ba9\u0bcd!",
+        "english_meaning": "I'm not sitting around doing nothing like you, I actually have work to do!",
+        "mode": "savage",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "tamil",
+        "script_mode": "native"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true,
+        "script_matches": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "language-telugu-roman",
+      "http": 200,
+      "wall_seconds": 1.471,
+      "settings": {
+        "reply_language": "telugu",
+        "script_mode": "roman",
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "8769fb91-e486-4fab-a107-1f6282a03ca7",
+        "conversation_id": "qa-8d3f41d700d5433e9553f67f2a55d65a",
+        "timing": {
+          "ai_ms": 1134,
+          "total_ms": 1145
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 212,
+          "output_tokens": 62,
+          "thinking_tokens": null,
+          "total_tokens": 274,
+          "uncertain_attempts": 0,
+          "latency_ms": 1110
+        },
+        "reply": "Nee timing chusthe, clock kooda shock ayyi slow ga nadusthundi emo! Next time alarm ki kuda ticket koni ivvu.",
+        "english_meaning": "Looking at your timing, even the clock must be shocked and running slow! Buy a ticket for the alarm next time.",
+        "mode": "savage",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "telugu",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true,
+        "script_matches": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "language-telugu-native",
+      "http": 200,
+      "wall_seconds": 1.497,
+      "settings": {
+        "reply_language": "telugu",
+        "script_mode": "native",
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "d9bfa93b-6ab6-4681-8318-24630d82b866",
+        "conversation_id": "qa-b66d269016844e5e8f1bb9c34500bb1e",
+        "timing": {
+          "ai_ms": 1054,
+          "total_ms": 1064
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 207,
+          "output_tokens": 46,
+          "thinking_tokens": null,
+          "total_tokens": 253,
+          "uncertain_attempts": 0,
+          "latency_ms": 1045
+        },
+        "reply": "\u0c2e\u0c40\u0c1f\u0c3f\u0c02\u0c17\u0c4d \u0c15\u0c3f \u0c28\u0c47\u0c28\u0c41 \u0c32\u0c47\u0c1f\u0c41\u0c17\u0c3e \u0c30\u0c3e\u0c32\u0c47\u0c26\u0c41, \u0c2e\u0c40\u0c30\u0c47 \u0c15\u0c3e\u0c38\u0c4d\u0c24 \u0c24\u0c4d\u0c35\u0c30\u0c17\u0c3e \u0c35\u0c1a\u0c4d\u0c1a\u0c47\u0c36\u0c3e\u0c30\u0c41 \u0c05\u0c02\u0c24\u0c47!",
+        "english_meaning": "I'm not late to the meeting, you just arrived a bit too early!",
+        "mode": "savage",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "telugu",
+        "script_mode": "native"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true,
+        "script_matches": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "language-bengali-roman",
+      "http": 200,
+      "wall_seconds": 1.707,
+      "settings": {
+        "reply_language": "bengali",
+        "script_mode": "roman",
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "257f44dc-9066-45d4-8c28-044b73482e12",
+        "conversation_id": "qa-ff66a52ab06149329f6dfa3b9079e862",
+        "timing": {
+          "ai_ms": 1270,
+          "total_ms": 1278
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 212,
+          "output_tokens": 48,
+          "thinking_tokens": null,
+          "total_tokens": 260,
+          "uncertain_attempts": 0,
+          "latency_ms": 1258
+        },
+        "reply": "Ami late noy, meeting-ta-i amar standard-er jonno ektu early shuru hoyeche!",
+        "english_meaning": "I am not late, the meeting just started a bit too early for my standards!",
+        "mode": "savage",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "bengali",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true,
+        "script_matches": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "language-bengali-native",
+      "http": 200,
+      "wall_seconds": 1.525,
+      "settings": {
+        "reply_language": "bengali",
+        "script_mode": "native",
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "52eb9bea-5782-4e34-b54c-d60b6d8cf0be",
+        "conversation_id": "qa-8a207c5909b848c19f0c3c49414e3dc6",
+        "timing": {
+          "ai_ms": 1071,
+          "total_ms": 1080
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 207,
+          "output_tokens": 46,
+          "thinking_tokens": null,
+          "total_tokens": 253,
+          "uncertain_attempts": 0,
+          "latency_ms": 1062
+        },
+        "reply": "\u09ae\u09bf\u099f\u09bf\u0982\u09df\u09c7 \u09a6\u09c7\u09b0\u09bf \u09a4\u09cb \u0986\u09ae\u09be\u09b0 \u09b8\u09cd\u099f\u09be\u0987\u09b2, \u0986\u09aa\u09a8\u09be\u09b0 \u09ae\u09a4\u09cb \u0996\u09be\u09b2\u09bf \u099a\u09c7\u09df\u09be\u09b0\u09c7\u09b0 \u0997\u09be\u09b0\u09cd\u09a1 \u09a4\u09cb \u0986\u09b0 \u09a8\u09be!",
+        "english_meaning": "Being late to the meeting is my style, I'm not like you who just guards empty chairs!",
+        "mode": "savage",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "bengali",
+        "script_mode": "native"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true,
+        "script_matches": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "language-marathi-roman",
+      "http": 200,
+      "wall_seconds": 1.779,
+      "settings": {
+        "reply_language": "marathi",
+        "script_mode": "roman",
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "bb46519e-ea49-4af0-852d-cd7d5551043d",
+        "conversation_id": "qa-3500eb17dbcc42c2b268c92d1c3e5b0a",
+        "timing": {
+          "ai_ms": 1342,
+          "total_ms": 1351
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 212,
+          "output_tokens": 57,
+          "thinking_tokens": null,
+          "total_tokens": 269,
+          "uncertain_attempts": 0,
+          "latency_ms": 1335
+        },
+        "reply": "Mi late nahiye, tumhi loka evdhe early yeta ki mala wait karaychi saway lagli ahe!",
+        "english_meaning": "I'm not late, you guys arrive so early that I've gotten used to making you wait!",
+        "mode": "savage",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "marathi",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true,
+        "script_matches": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "language-marathi-native",
+      "http": 200,
+      "wall_seconds": 1.356,
+      "settings": {
+        "reply_language": "marathi",
+        "script_mode": "native",
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "1c3c2b26-53cd-42f5-81fe-7a58c2e1812c",
+        "conversation_id": "qa-2ff52b0bc1d04d6e92de6a1f44af38ca",
+        "timing": {
+          "ai_ms": 930,
+          "total_ms": 939
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 207,
+          "output_tokens": 46,
+          "thinking_tokens": null,
+          "total_tokens": 253,
+          "uncertain_attempts": 0,
+          "latency_ms": 919
+        },
+        "reply": "\u092e\u0940\u091f\u093f\u0902\u0917 \u0909\u0936\u0940\u0930\u093e \u0938\u0941\u0930\u0942 \u091d\u093e\u0932\u0940 \u0924\u0930 \u0915\u093e\u092f, \u0924\u0941\u091d\u093e \u092a\u0930\u092b\u0949\u0930\u094d\u092e\u0928\u094d\u0938 \u092c\u0918\u0942\u0928 \u0906\u0927\u0940\u091a \u0932\u094b\u0915 \u091d\u094b\u092a\u0932\u0947\u0924!",
+        "english_meaning": "So what if the meeting started late, people are already asleep seeing your performance!",
+        "mode": "savage",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "marathi",
+        "script_mode": "native"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true,
+        "script_matches": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "language-punjabi-roman",
+      "http": 200,
+      "wall_seconds": 1.779,
+      "settings": {
+        "reply_language": "punjabi",
+        "script_mode": "roman",
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "51134fc1-fa50-46f7-9e30-16396c735ae2",
+        "conversation_id": "qa-d4cf848503f54e9a9fbf904dfe73527b",
+        "timing": {
+          "ai_ms": 1333,
+          "total_ms": 1346
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 212,
+          "output_tokens": 38,
+          "thinking_tokens": null,
+          "total_tokens": 250,
+          "uncertain_attempts": 0,
+          "latency_ms": 1324
+        },
+        "reply": "Vehle baith ke tare ginnda si ki jo phir late ho gaya?",
+        "english_meaning": "Were you sitting idle counting stars or something, that you got late again?",
+        "mode": "savage",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "punjabi",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true,
+        "script_matches": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "language-punjabi-native",
+      "http": 200,
+      "wall_seconds": 1.506,
+      "settings": {
+        "reply_language": "punjabi",
+        "script_mode": "native",
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "df0c6698-ae2e-4841-abd8-e0da5043fca7",
+        "conversation_id": "qa-261020bfc4e34c7383e176ae4c798f96",
+        "timing": {
+          "ai_ms": 1072,
+          "total_ms": 1084
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 207,
+          "output_tokens": 49,
+          "thinking_tokens": null,
+          "total_tokens": 256,
+          "uncertain_attempts": 0,
+          "latency_ms": 1063
+        },
+        "reply": "\u0a2e\u0a48\u0a02 \u0a32\u0a47\u0a1f \u0a28\u0a39\u0a40\u0a02 \u0a39\u0a41\u0a70\u0a26\u0a3e, \u0a2e\u0a40\u0a1f\u0a3f\u0a70\u0a17 \u0a39\u0a40 \u0a2e\u0a47\u0a30\u0a47 \u0a2c\u0a3f\u0a28\u0a3e\u0a02 \u0a05\u0a27\u0a42\u0a30\u0a40 \u0a39\u0a48\u0964",
+        "english_meaning": "I am not late, the meeting is just incomplete without me.",
+        "mode": "savage",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "punjabi",
+        "script_mode": "native"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true,
+        "script_matches": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "language-urdu-roman",
+      "http": 200,
+      "wall_seconds": 1.552,
+      "settings": {
+        "reply_language": "urdu",
+        "script_mode": "roman",
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "42762946-4503-47c2-b84f-6706c60b2cdf",
+        "conversation_id": "qa-b4bde8c186f84bb6892a4c79dce200d6",
+        "timing": {
+          "ai_ms": 1148,
+          "total_ms": 1162
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 212,
+          "output_tokens": 44,
+          "thinking_tokens": null,
+          "total_tokens": 256,
+          "uncertain_attempts": 0,
+          "latency_ms": 1140
+        },
+        "reply": "Time ki tardeed se fursat mile toh ghar ki ghadi theek karwa lena.",
+        "english_meaning": "If you ever find time from complaining about time, maybe fix the clock at your house.",
+        "mode": "savage",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "urdu",
+        "script_mode": "roman"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true,
+        "script_matches": true
+      },
+      "status": "PASS"
+    },
+    {
+      "case": "language-urdu-native",
+      "http": 200,
+      "wall_seconds": 1.56,
+      "settings": {
+        "reply_language": "urdu",
+        "script_mode": "native",
+        "profanity_level": "off"
+      },
+      "response": {
+        "request_id": "7e5ac704-50bd-4856-8153-234e057bde0f",
+        "conversation_id": "qa-fc86118991ea4f1a8c93cd56ccb7c714",
+        "timing": {
+          "ai_ms": 1249,
+          "total_ms": 1288
+        },
+        "usage": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash-lite",
+          "attempts": 1,
+          "input_tokens": 207,
+          "output_tokens": 50,
+          "thinking_tokens": null,
+          "total_tokens": 257,
+          "uncertain_attempts": 0,
+          "latency_ms": 1240
+        },
+        "reply": "\u0645\u06cc\u0679\u0646\u06af \u0645\u06cc\u06ba \u0645\u06cc\u06ba \u06c1\u0645\u06cc\u0634\u06c1 \u062f\u06cc\u0631 \u0633\u06d2 \u0646\u06c1\u06cc\u06ba \u0622\u062a\u0627\u060c \u0628\u0633 \u062a\u0645 \u0644\u0648\u06af \u062c\u0644\u062f\u06cc \u0622 \u06a9\u0631 \u0628\u0648\u0631 \u06c1\u0648\u0646\u06d2 \u06a9\u0627 \u0634\u0648\u0642 \u0631\u06a9\u06be\u062a\u06d2 \u06c1\u0648\u06d4",
+        "english_meaning": "I am not always late to the meeting; you guys just love showing up early and getting bored.",
+        "mode": "savage",
+        "intensity": 7,
+        "input_language": "english",
+        "reply_language": "urdu",
+        "script_mode": "native"
+      },
+      "checks": {
+        "success": true,
+        "maximum_length": true,
+        "meaning_present": true,
+        "common_english_profanity_absent": true,
+        "script_matches": true
+      },
+      "status": "PASS"
+    }
+  ],
+  "initial_rate_limit_evidence": [
+    {
+      "case": "profanity-light",
+      "http": 502,
+      "wall_seconds": 0.996,
+      "settings": {
+        "profanity_level": "light"
+      },
+      "response": {
+        "detail": "Gemini quota or rate limit reached. Wait and retry, or check Google AI Studio quota.",
+        "request_id": "e0af0077-8de0-4c5e-8506-35118ba46537",
+        "provider_status": 429,
+        "attempts": 1,
+        "status_code": 502
+      },
+      "checks": {
+        "success": false,
+        "maximum_length": false,
+        "meaning_present": false
+      },
+      "status": "FAIL"
+    },
+    {
+      "case": "profanity-heavy",
+      "http": 502,
+      "wall_seconds": 0.864,
+      "settings": {
+        "profanity_level": "heavy"
+      },
+      "response": {
+        "detail": "Gemini quota or rate limit reached. Wait and retry, or check Google AI Studio quota.",
+        "request_id": "5900ebc2-88a3-4daa-951e-1555f6fbebf7",
+        "provider_status": 429,
+        "attempts": 1,
+        "status_code": 502
+      },
+      "checks": {
+        "success": false,
+        "maximum_length": false,
+        "meaning_present": false
+      },
+      "status": "FAIL"
+    },
+    {
+      "case": "length-300",
+      "http": 429,
+      "wall_seconds": 0.292,
+      "settings": {
+        "max_reply_length": 300,
+        "profanity_level": "off"
+      },
+      "response": {
+        "detail": "Generation limit reached. Try again shortly."
+      },
+      "checks": {
+        "success": false,
+        "maximum_length": false,
+        "meaning_present": false
+      },
+      "status": "FAIL"
+    },
+    {
+      "case": "length-1000",
+      "http": 429,
+      "wall_seconds": 0.416,
+      "settings": {
+        "max_reply_length": 1000,
+        "profanity_level": "off"
+      },
+      "response": {
+        "detail": "Generation limit reached. Try again shortly."
+      },
+      "checks": {
+        "success": false,
+        "maximum_length": false,
+        "meaning_present": false
+      },
+      "status": "FAIL"
+    },
+    {
+      "case": "language-english-roman",
+      "http": 429,
+      "wall_seconds": 0.416,
+      "settings": {
+        "reply_language": "english",
+        "script_mode": "roman",
+        "profanity_level": "off"
+      },
+      "response": {
+        "detail": "Generation limit reached. Try again shortly."
+      },
+      "checks": {
+        "success": false,
+        "maximum_length": false,
+        "meaning_present": false
+      },
+      "status": "FAIL"
+    },
+    {
+      "case": "language-english-native",
+      "http": 429,
+      "wall_seconds": 0.428,
+      "settings": {
+        "reply_language": "english",
+        "script_mode": "native",
+        "profanity_level": "off"
+      },
+      "response": {
+        "detail": "Generation limit reached. Try again shortly."
+      },
+      "checks": {
+        "success": false,
+        "maximum_length": false,
+        "meaning_present": false
+      },
+      "status": "FAIL"
+    },
+    {
+      "case": "language-hindi-roman",
+      "http": 429,
+      "wall_seconds": 0.42,
+      "settings": {
+        "reply_language": "hindi",
+        "script_mode": "roman",
+        "profanity_level": "off"
+      },
+      "response": {
+        "detail": "Generation limit reached. Try again shortly."
+      },
+      "checks": {
+        "success": false,
+        "maximum_length": false,
+        "meaning_present": false
+      },
+      "status": "FAIL"
+    },
+    {
+      "case": "language-hindi-native",
+      "http": 429,
+      "wall_seconds": 0.268,
+      "settings": {
+        "reply_language": "hindi",
+        "script_mode": "native",
+        "profanity_level": "off"
+      },
+      "response": {
+        "detail": "Generation limit reached. Try again shortly."
+      },
+      "checks": {
+        "success": false,
+        "maximum_length": false,
+        "meaning_present": false
+      },
+      "status": "FAIL"
+    },
+    {
+      "case": "language-kannada-roman",
+      "http": 429,
+      "wall_seconds": 0.428,
+      "settings": {
+        "reply_language": "kannada",
+        "script_mode": "roman",
+        "profanity_level": "off"
+      },
+      "response": {
+        "detail": "Generation limit reached. Try again shortly."
+      },
+      "checks": {
+        "success": false,
+        "maximum_length": false,
+        "meaning_present": false
+      },
+      "status": "FAIL"
+    },
+    {
+      "case": "language-kannada-native",
+      "http": 429,
+      "wall_seconds": 0.268,
+      "settings": {
+        "reply_language": "kannada",
+        "script_mode": "native",
+        "profanity_level": "off"
+      },
+      "response": {
+        "detail": "Generation limit reached. Try again shortly."
+      },
+      "checks": {
+        "success": false,
+        "maximum_length": false,
+        "meaning_present": false
+      },
+      "status": "FAIL"
+    },
+    {
+      "case": "language-malayalam-roman",
+      "http": 429,
+      "wall_seconds": 0.424,
+      "settings": {
+        "reply_language": "malayalam",
+        "script_mode": "roman",
+        "profanity_level": "off"
+      },
+      "response": {
+        "detail": "Generation limit reached. Try again shortly."
+      },
+      "checks": {
+        "success": false,
+        "maximum_length": false,
+        "meaning_present": false
+      },
+      "status": "FAIL"
+    },
+    {
+      "case": "language-malayalam-native",
+      "http": 429,
+      "wall_seconds": 0.42,
+      "settings": {
+        "reply_language": "malayalam",
+        "script_mode": "native",
+        "profanity_level": "off"
+      },
+      "response": {
+        "detail": "Generation limit reached. Try again shortly."
+      },
+      "checks": {
+        "success": false,
+        "maximum_length": false,
+        "meaning_present": false
+      },
+      "status": "FAIL"
+    },
+    {
+      "case": "language-tamil-roman",
+      "http": 429,
+      "wall_seconds": 0.28,
+      "settings": {
+        "reply_language": "tamil",
+        "script_mode": "roman",
+        "profanity_level": "off"
+      },
+      "response": {
+        "detail": "Generation limit reached. Try again shortly."
+      },
+      "checks": {
+        "success": false,
+        "maximum_length": false,
+        "meaning_present": false
+      },
+      "status": "FAIL"
+    },
+    {
+      "case": "language-tamil-native",
+      "http": 429,
+      "wall_seconds": 0.412,
+      "settings": {
+        "reply_language": "tamil",
+        "script_mode": "native",
+        "profanity_level": "off"
+      },
+      "response": {
+        "detail": "Generation limit reached. Try again shortly."
+      },
+      "checks": {
+        "success": false,
+        "maximum_length": false,
+        "meaning_present": false
+      },
+      "status": "FAIL"
+    },
+    {
+      "case": "language-telugu-roman",
+      "http": 429,
+      "wall_seconds": 0.264,
+      "settings": {
+        "reply_language": "telugu",
+        "script_mode": "roman",
+        "profanity_level": "off"
+      },
+      "response": {
+        "detail": "Generation limit reached. Try again shortly."
+      },
+      "checks": {
+        "success": false,
+        "maximum_length": false,
+        "meaning_present": false
+      },
+      "status": "FAIL"
+    },
+    {
+      "case": "language-telugu-native",
+      "http": 429,
+      "wall_seconds": 0.448,
+      "settings": {
+        "reply_language": "telugu",
+        "script_mode": "native",
+        "profanity_level": "off"
+      },
+      "response": {
+        "detail": "Generation limit reached. Try again shortly."
+      },
+      "checks": {
+        "success": false,
+        "maximum_length": false,
+        "meaning_present": false
+      },
+      "status": "FAIL"
+    },
+    {
+      "case": "language-bengali-roman",
+      "http": 429,
+      "wall_seconds": 0.436,
+      "settings": {
+        "reply_language": "bengali",
+        "script_mode": "roman",
+        "profanity_level": "off"
+      },
+      "response": {
+        "detail": "Generation limit reached. Try again shortly."
+      },
+      "checks": {
+        "success": false,
+        "maximum_length": false,
+        "meaning_present": false
+      },
+      "status": "FAIL"
+    },
+    {
+      "case": "language-bengali-native",
+      "http": 429,
+      "wall_seconds": 0.424,
+      "settings": {
+        "reply_language": "bengali",
+        "script_mode": "native",
+        "profanity_level": "off"
+      },
+      "response": {
+        "detail": "Generation limit reached. Try again shortly."
+      },
+      "checks": {
+        "success": false,
+        "maximum_length": false,
+        "meaning_present": false
+      },
+      "status": "FAIL"
+    },
+    {
+      "case": "language-marathi-roman",
+      "http": 429,
+      "wall_seconds": 0.284,
+      "settings": {
+        "reply_language": "marathi",
+        "script_mode": "roman",
+        "profanity_level": "off"
+      },
+      "response": {
+        "detail": "Generation limit reached. Try again shortly."
+      },
+      "checks": {
+        "success": false,
+        "maximum_length": false,
+        "meaning_present": false
+      },
+      "status": "FAIL"
+    },
+    {
+      "case": "language-marathi-native",
+      "http": 429,
+      "wall_seconds": 0.416,
+      "settings": {
+        "reply_language": "marathi",
+        "script_mode": "native",
+        "profanity_level": "off"
+      },
+      "response": {
+        "detail": "Generation limit reached. Try again shortly."
+      },
+      "checks": {
+        "success": false,
+        "maximum_length": false,
+        "meaning_present": false
+      },
+      "status": "FAIL"
+    },
+    {
+      "case": "language-punjabi-roman",
+      "http": 429,
+      "wall_seconds": 0.412,
+      "settings": {
+        "reply_language": "punjabi",
+        "script_mode": "roman",
+        "profanity_level": "off"
+      },
+      "response": {
+        "detail": "Generation limit reached. Try again shortly."
+      },
+      "checks": {
+        "success": false,
+        "maximum_length": false,
+        "meaning_present": false
+      },
+      "status": "FAIL"
+    },
+    {
+      "case": "language-punjabi-native",
+      "http": 429,
+      "wall_seconds": 0.28,
+      "settings": {
+        "reply_language": "punjabi",
+        "script_mode": "native",
+        "profanity_level": "off"
+      },
+      "response": {
+        "detail": "Generation limit reached. Try again shortly."
+      },
+      "checks": {
+        "success": false,
+        "maximum_length": false,
+        "meaning_present": false
+      },
+      "status": "FAIL"
+    },
+    {
+      "case": "language-urdu-roman",
+      "http": 429,
+      "wall_seconds": 0.272,
+      "settings": {
+        "reply_language": "urdu",
+        "script_mode": "roman",
+        "profanity_level": "off"
+      },
+      "response": {
+        "detail": "Generation limit reached. Try again shortly."
+      },
+      "checks": {
+        "success": false,
+        "maximum_length": false,
+        "meaning_present": false
+      },
+      "status": "FAIL"
+    },
+    {
+      "case": "language-urdu-native",
+      "http": 429,
+      "wall_seconds": 0.424,
+      "settings": {
+        "reply_language": "urdu",
+        "script_mode": "native",
+        "profanity_level": "off"
+      },
+      "response": {
+        "detail": "Generation limit reached. Try again shortly."
+      },
+      "checks": {
+        "success": false,
+        "maximum_length": false,
+        "meaning_present": false
+      },
+      "status": "FAIL"
+    }
+  ],
+  "note": "Smoke samples, not statistical proof or native-speaker semantic review"
+}

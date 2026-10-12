@@ -47,6 +47,8 @@ export default function Home() {
   const [notice,setNotice] = useState('')
   const [error,setError] = useState('')
   const generationLock = useRef(false)
+  const savedStudioSettings = useRef('')
+  const studioFingerprint = (value:any) => JSON.stringify(['roast_mode','intensity','profanity_level','custom_instructions','input_language','reply_language','script_mode','max_reply_length'].map(key=>value[key]))
   const [busy,setBusy] = useState(false)
   const [connected,setConnected] = useState(false)
   const [token,setToken] = useState('')
@@ -87,7 +89,7 @@ export default function Home() {
         request('/api/settings',{},initial?90000:45000),request('/api/platforms/status',{},initial?90000:45000),request('/api/activity',{},initial?90000:45000),
         request('/api/conversations',{},initial?90000:45000),initial?request('/api/messages?platform='+selectedThread.platform+'&sender_id='+encodeURIComponent(selectedThread.sender_id),{},90000):Promise.resolve([])
       ])
-      if(initial) {setSettings(s);setNotice('')}
+      if(initial) {setSettings(s);savedStudioSettings.current=studioFingerprint(s);setNotice('')}
       else setSettings((old:any)=>({...old,enabled:s.enabled,emergency_stop:s.emergency_stop}))
       setHealth(h); setActivities(a); setConvos(c)
       if(initial) {setMessages(m);setHasOlder(m.length===100)}
@@ -141,7 +143,7 @@ export default function Home() {
   useEffect(()=>{setMenuOpen(false)},[tab,authorized])
   const save = () => action(async()=>{
     const value=await request('/api/settings',{method:'PUT',body:JSON.stringify(settings)})
-    setSettings(value); setNotice('Preferences saved'); await refresh()
+    setSettings(value);savedStudioSettings.current=studioFingerprint(value); setNotice('Preferences saved'); await refresh()
   })
   const toggle = () => action(async()=>{
     const value=await request(settings.enabled?'/api/bot/stop':'/api/bot/start',{method:'POST'})
@@ -159,8 +161,10 @@ export default function Home() {
     setBusy(true); setLoading(true); setReply(''); setMeaning(''); setNotice('')
     try {
       // Studio controls apply to this request even before an explicit Save.
-      const saved=await request('/api/settings',{method:'PUT',body:JSON.stringify(settings)})
-      setSettings(saved)
+      if(studioFingerprint(settings)!==savedStudioSettings.current){
+        const saved=await request('/api/settings',{method:'PUT',body:JSON.stringify(settings)})
+        setSettings(saved);savedStudioSettings.current=studioFingerprint(saved)
+      }
       const d=await request('/api/roast',{method:'POST',body:JSON.stringify({request_id:crypto.randomUUID(),conversation_id:selectedThread.platform==='local'?selectedThread.sender_id:'roast-me',message:msg,input_language:settings.input_language,reply_language:settings.reply_language,script_mode:settings.script_mode})})
       setReply(d.reply); setMeaning(d.english_meaning); setResultMeta(d); setNotice('Reply and English meaning generated'); setLoading(false)
       const latest=await request('/api/messages?platform=local&sender_id='+encodeURIComponent(d.conversation_id||'roast-me'))
@@ -233,7 +237,7 @@ export default function Home() {
       {error&&<div className="errorBanner" role="alert"><span>{error}</span><button className="secondary" onClick={()=>setError('')} aria-label="Dismiss error">✕</button></div>}
       <header className="topbar">
         <div><div className="eyebrow">ROASTAI / {tab.toUpperCase()}</div><h1>{title}</h1><p>Fast comebacks, multilingual control, and a clean command center.</p></div>
-        <div className="topRight"><div className={connected&&health.provider_health?.status==='healthy'?'gemini':'gemini pendingGemini'}><i/> Gemini <span>{!connected?'Offline':!health.gemini?'Setup needed':health.provider_health?.status==='healthy'?'Last request OK':health.provider_health?.status==='unavailable'?'Unavailable':'Not tested'}</span></div><button className={settings.enabled?'power on':'power'} onClick={toggle} disabled={busy||loading||authMode!=='owner'}><i/>{settings.enabled?'Bot ON':'Bot OFF'}</button></div>
+        <div className="topRight"><div className={connected&&health.provider_health?.status==='healthy'?'gemini':'gemini pendingGemini'}><i/> Gemini <span>{!connected?'Offline':!health.gemini?'Setup needed':health.provider_health?.status==='healthy'?'Last request OK':health.provider_health?.status==='unavailable'?'Unavailable':health.provider_health?.status==='rate_limited'?'Quota limited':health.provider_health?.status==='setup_error'?'Setup error':'Not tested'}</span></div><button className={settings.enabled?'power on':'power'} onClick={toggle} disabled={busy||loading||authMode!=='owner'}><i/>{settings.enabled?'Bot ON':'Bot OFF'}</button></div>
       </header>
 
       {notice && <div className="toast" role="status" aria-live="polite">{notice}</div>}
