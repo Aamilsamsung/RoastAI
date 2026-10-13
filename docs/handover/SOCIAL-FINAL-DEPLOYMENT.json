@@ -1,0 +1,19 @@
+{
+  "release": "0fc11c1119cf975f962fca0bc9e8f8040366f449",
+  "ci_run": 38400934954,
+  "checks": [
+    "final backend health HTTP 200",
+    "final frontend HTTP 200",
+    "public frontend serves user-owned bot and connection code",
+    "QA preferences and paused state survived deployment",
+    "QA conversation pair survived deployment",
+    "conversation isolation still holds after deployment",
+    "PostgreSQL active and live delivery still disabled",
+    "QA logout succeeded",
+    "QA session revoked after logout",
+    "QA logout succeeded",
+    "QA session revoked after logout"
+  ],
+  "passed": 11,
+  "notes": "No existing user records deleted. QA sessions revoked; QA conversation retained as non-customer test data. Real Meta authorization/delivery remains untested and disabled."
+}
