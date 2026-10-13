@@ -49,6 +49,24 @@ services:
         value: v23.0
       - key: GOOGLE_CLIENT_ID
         sync: false
+      - key: BACKEND_URL
+        sync: false
+      - key: SOCIAL_TOKEN_ENCRYPTION_KEY
+        generateValue: true
+      - key: META_APP_ID
+        sync: false
+      - key: META_APP_SECRET
+        sync: false
+      - key: META_VERIFY_TOKEN
+        sync: false
+      - key: INSTAGRAM_CLIENT_ID
+        sync: false
+      - key: INSTAGRAM_CLIENT_SECRET
+        sync: false
+      - key: FACEBOOK_LOGIN_CONFIG_ID
+        sync: false
+      - key: WHATSAPP_SIGNUP_CONFIG_ID
+        sync: false
       - key: FACEBOOK_API_VERSION
         value: v23.0
       - key: INSTAGRAM_LOGIN_TYPE

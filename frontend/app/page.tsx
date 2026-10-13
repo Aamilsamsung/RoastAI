@@ -5,6 +5,7 @@ import Logo from '../components/Logo'
 import SnapchatCollaboration from '../components/SnapchatCollaboration'
 import GoogleSignIn from '../components/GoogleSignIn'
 import AuthScreen from '../components/AuthScreen'
+import SocialConnections from '../components/SocialConnections'
 import HubLoading from '../components/HubLoading'
 
 const API = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '')
@@ -80,7 +81,8 @@ export default function Home() {
     if(token!==currentToken.current)throw sessionChanged()
     if(!response.ok) {
       if(response.status===401 && !path.startsWith('/api/auth/')) {setAuthorized(false);setToken('');try{sessionStorage.removeItem('roastai-session');sessionStorage.removeItem('roastai-pending-request');pendingGeneration.current=null}catch{}}
-      throw Object.assign(Error((typeof data.detail==='string'?data.detail:'Check your inputs and try again.')+(data.request_id?' · Request '+data.request_id:'')),{status:response.status})
+      const rid=data.request_id||response.headers.get('X-Request-ID')
+      throw Object.assign(Error((typeof data.detail==='string'?data.detail:'Check your inputs and try again.')+(rid?' · Request '+rid:'')),{status:response.status})
     }
     return data
   }
@@ -112,6 +114,17 @@ export default function Home() {
   },[])
   useEffect(()=>{if(!sessionReady)return;if(token && authMode!=='owner') refresh(true);else if(token && initializing) refresh(true);else setInitializing(false)},[sessionReady,token])
   useEffect(()=>{if(authorized && token){try{sessionStorage.setItem('roastai-session',JSON.stringify({token,mode:authMode,thread:selectedThread}))}catch{}}},[authorized,token,authMode,selectedThread])
+  useEffect(()=>{
+    if(!authorized)return
+    const url=new URL(window.location.href),result=url.searchParams.get('social')
+    if(result==='connected'||result==='failed'||result==='select_page'){
+      setTab('platforms')
+      if(result==='select_page')setNotice('Facebook authorization received. Choose your Page below to complete the connection.')
+      else if(result==='connected')setNotice('Instagram authorization and webhook subscription verified. Live delivery remains disabled until approved.')
+      else setError('Social connection failed. Check professional-account eligibility, required permissions and app configuration, then reconnect.')
+      url.searchParams.delete('social');window.history.replaceState(null,'',url.pathname+url.search+url.hash)
+    }
+  },[authorized])
   useEffect(()=>{
     if(!notice || !authorized) return
     const timer=setTimeout(()=>setNotice(''),7000)
@@ -156,7 +169,7 @@ export default function Home() {
   })
   const toggle = () => action(async()=>{
     const value=await request(settings.enabled?'/api/bot/stop':'/api/bot/start',{method:'POST'})
-    setSettings(value); setNotice(value.enabled?'Bot started':'Bot paused'); await refresh()
+    setSettings(value); setNotice(value.enabled?'Your social bot enabled · '+(health.delivery_approved?'uses your connected accounts':'dry-run only; no messages sent'):'Your social bot paused'); await refresh()
   })
   const emergency = async() => {
     try {
@@ -245,13 +258,13 @@ export default function Home() {
   return <main>
     <aside className="sidebar desktopSidebar">
       <div className="brand"><Logo/><div><b>Roast<span>AI</span></b><small>Gemini roast workspace</small></div></div>
-      <button className="newRoast" onClick={()=>{newConversation()}}><Icon name="bolt"/> New roast <kbd>⌘ K</kbd></button>
+      <button className="newRoast" disabled={busy||loading} onClick={()=>{newConversation()}}><Icon name="bolt"/> New roast <kbd>⌘ K</kbd></button>
       <nav aria-label="Workspace navigation">{nav.map(([id,label,icon])=><button key={id} className={tab===id?'nav active':'nav'} aria-label={label} aria-current={tab===id?'page':undefined} onClick={()=>{setTab(id);refresh()}}><Icon name={icon}/><span>{label}</span>{id==='activity'&&activities.length>0?<em>{Math.min(activities.length,99)}</em>:null}</button>)}</nav>
       <div className="sideCard">
-        <div className="miniLogo"><Logo/></div><div><strong>{settings.enabled?'Bot enabled':'Bot paused'}</strong><small>{settings.dry_run||!health.delivery_approved?'Dry-run enforced':'Delivery approved'}</small></div>
-        <button aria-label="Toggle bot" aria-pressed={settings.enabled} onClick={toggle} disabled={busy||loading||authMode!=='owner'} title={authMode==='owner'?'Toggle social bot':'Social bot controls are owner-only'} className={settings.enabled?'tinySwitch on':'tinySwitch'}><i/></button>
+        <div className="miniLogo"><Logo/></div><div><strong>{settings.enabled?'Your bot enabled':'Your bot paused'}</strong><small>{settings.dry_run||!health.delivery_approved?'Dry-run enforced':'Delivery approved'}</small></div>
+        <button aria-label="Toggle bot" aria-pressed={settings.enabled} onClick={toggle} disabled={busy||loading} title="Toggle your social bot; manual Studio replies are always available" className={settings.enabled?'tinySwitch on':'tinySwitch'}><i/></button>
       </div>
-      <button className="emergency" disabled={authMode!=='owner'} title={authMode==='owner'?'Stop social delivery':'Social bot controls are owner-only'} onClick={emergency}>Emergency stop</button>
+      <button className="emergency" disabled={busy} title="Stop your social bot and Studio generation" onClick={emergency}>Emergency stop</button>
       <button className="ghost" onClick={()=>{request('/api/auth/logout',{method:'POST'}).catch(()=>{});try{sessionStorage.removeItem('roastai-session');sessionStorage.removeItem('roastai-pending-request');pendingGeneration.current=null}catch{};setToken('');currentToken.current='';generationLock.current=false;setBusy(false);setLoading(false);setAuthorized(false);setMsg('');setError('');setResultMeta(null);setHealth({});setSelectedThread({platform:'local',sender_id:'roast-me'});setReply('');setMeaning('');setMessages([]);setConvos([]);setActivities([]);setNotice('Signed out')}}>Sign out</button><div className="privacy">Secure workspace • Keys stay server-side</div>
     </aside>
     <div className="mobileWorkspaceBar"><button className="secondary" aria-label="Open navigation" aria-haspopup="dialog" aria-expanded={menuOpen} aria-controls="mobile-navigation" onClick={()=>setMenuOpen(true)}>☰ <span>Menu</span></button><div className="mobileBrand"><Logo/><b>RoastAI</b></div></div>
@@ -259,13 +272,13 @@ export default function Home() {
       <div className="drawerHeader"><h2 id="mobile-navigation-title">Workspace</h2><button autoFocus className="secondary" aria-label="Close navigation" onClick={()=>setMenuOpen(false)}>✕</button></div>
       <aside className="sidebar mobileSidebar">
       <div className="brand"><Logo/><div><b>Roast<span>AI</span></b><small>Gemini roast workspace</small></div></div>
-      <button className="newRoast" onClick={()=>{setMenuOpen(false);newConversation()}}><Icon name="bolt"/> New roast <kbd>⌘ K</kbd></button>
+      <button className="newRoast" disabled={busy||loading} onClick={()=>{setMenuOpen(false);newConversation()}}><Icon name="bolt"/> New roast <kbd>⌘ K</kbd></button>
       <nav aria-label="Workspace navigation">{nav.map(([id,label,icon])=><button key={id} className={tab===id?'nav active':'nav'} aria-label={label} aria-current={tab===id?'page':undefined} onClick={()=>{setMenuOpen(false);setTab(id);refresh()}}><Icon name={icon}/><span>{label}</span>{id==='activity'&&activities.length>0?<em>{Math.min(activities.length,99)}</em>:null}</button>)}</nav>
       <div className="sideCard">
-        <div className="miniLogo"><Logo/></div><div><strong>{settings.enabled?'Bot enabled':'Bot paused'}</strong><small>{settings.dry_run||!health.delivery_approved?'Dry-run enforced':'Delivery approved'}</small></div>
-        <button aria-label="Toggle bot" aria-pressed={settings.enabled} onClick={toggle} disabled={busy||loading||authMode!=='owner'} title={authMode==='owner'?'Toggle social bot':'Social bot controls are owner-only'} className={settings.enabled?'tinySwitch on':'tinySwitch'}><i/></button>
+        <div className="miniLogo"><Logo/></div><div><strong>{settings.enabled?'Your bot enabled':'Your bot paused'}</strong><small>{settings.dry_run||!health.delivery_approved?'Dry-run enforced':'Delivery approved'}</small></div>
+        <button aria-label="Toggle bot" aria-pressed={settings.enabled} onClick={toggle} disabled={busy||loading} title="Toggle your social bot; manual Studio replies are always available" className={settings.enabled?'tinySwitch on':'tinySwitch'}><i/></button>
       </div>
-      <button className="emergency" disabled={authMode!=='owner'} title={authMode==='owner'?'Stop social delivery':'Social bot controls are owner-only'} onClick={emergency}>Emergency stop</button>
+      <button className="emergency" disabled={busy} title="Stop your social bot and Studio generation" onClick={emergency}>Emergency stop</button>
       <button className="ghost" onClick={()=>{request('/api/auth/logout',{method:'POST'}).catch(()=>{});try{sessionStorage.removeItem('roastai-session');sessionStorage.removeItem('roastai-pending-request');pendingGeneration.current=null}catch{};setToken('');currentToken.current='';generationLock.current=false;setBusy(false);setLoading(false);setAuthorized(false);setMsg('');setError('');setResultMeta(null);setHealth({});setSelectedThread({platform:'local',sender_id:'roast-me'});setReply('');setMeaning('');setMessages([]);setConvos([]);setActivities([]);setNotice('Signed out')}}>Sign out</button><div className="privacy">Secure workspace • Keys stay server-side</div>
       </aside>
     </dialog>
@@ -274,7 +287,7 @@ export default function Home() {
       {error&&<div className="errorBanner" role="alert"><span>{error}</span><button className="secondary" onClick={()=>setError('')} aria-label="Dismiss error">✕</button></div>}
       <header className="topbar">
         <div><div className="eyebrow">ROASTAI / {tab.toUpperCase()}</div><h1>{title}</h1><p>Fast comebacks, multilingual control, and a clean command center.</p></div>
-        <div className="topRight"><div className={connected&&health.provider_health?.status==='healthy'?'gemini':'gemini pendingGemini'}><i/> Gemini <span>{!connected?'Offline':!health.gemini?'Setup needed':health.provider_health?.status==='healthy'?'Last request OK':health.provider_health?.status==='unavailable'?'Unavailable':health.provider_health?.status==='rate_limited'?'Quota limited':health.provider_health?.status==='setup_error'?'Setup error':'Not tested'}</span></div><button className={settings.enabled?'power on':'power'} onClick={toggle} disabled={busy||loading||authMode!=='owner'}><i/>{settings.enabled?'Bot ON':'Bot OFF'}</button></div>
+        <div className="topRight"><div className={connected&&health.provider_health?.status==='healthy'?'gemini':'gemini pendingGemini'}><i/> Gemini <span>{!connected?'Offline':!health.gemini?'Setup needed':health.provider_health?.status==='healthy'?'Last request OK':health.provider_health?.status==='unavailable'?'Unavailable':health.provider_health?.status==='rate_limited'?'Quota limited':health.provider_health?.status==='setup_error'?'Setup error':'Not tested'}</span></div><button className={settings.enabled?'power on':'power'} onClick={toggle} disabled={busy||loading}><i/>{settings.enabled?'Your bot ON':'Your bot OFF'}</button></div>
       </header>
 
       {notice && <div className="toast" role="status" aria-live="polite">{notice}</div>}
@@ -351,7 +364,7 @@ export default function Home() {
 
       {tab==='activity' && <div className="pageGrid"><div className="card listCard"><div className="cardHead"><div><span className="kicker">SYSTEM LOG</span><h2>Activity</h2></div><span className="liveBadge"><i/> Live</span></div>{activities.length===0?<Empty text="Nothing has happened yet."/>:<div>{activities.map((a,i)=><div className="activity" key={i}><span className="activityDot"/><div><b>{a.category}</b><p>{a.message}</p></div><time>{new Date(a.timestamp).toLocaleTimeString()}</time></div>)}</div>}</div><div className="card statCard"><span className="kicker">HEALTH</span><div className="bigStat">{connected&&health.gemini?'CONFIGURED':'—'}</div><p>Gemini configuration</p><div className="healthRow"><span>WhatsApp</span><b className={health.whatsapp?'ok':''}>{health.whatsapp?'Configured':'Setup needed'}</b></div><div className="healthRow"><span>Instagram</span><b className={health.instagram?'ok':''}>{health.instagram?'Configured':'Setup needed'}</b></div></div></div>}
 
-      {tab==='platforms' && <div className="pageGrid"><div className="card listCard"><div className="kicker">CONNECT YOUR SOCIALS</div><h2>Delivery channels</h2><p className="muted">Only official platform APIs are used. Credentials set does not verify ownership, permission or delivery. Live delivery requires controlled tests and owner approval.</p>{[['Instagram','instagram','View messages and account events'],['WhatsApp','whatsapp','Receive and send supported messages'],['Facebook Messenger','facebook','Reply to messages sent to your Facebook Page']].map(([name,key,desc])=><div className="platformRow" key={key}><div className="platformBrand">{key==='instagram'?'◎':'◉'}</div><div><b>{name}</b><small>{desc}</small></div><span className={health[key]?'connected':'pending'}>{health[key]?'Credentials set':'Setup needed'}</span><button onClick={()=>{setTab('settings');setNotice('Configure platform credentials in the backend Render environment')}}>Configure</button></div>)}<div className="platformRow"><div className="platformBrand">◉</div><div><b>Snapchat</b><small>Official brand–creator collaboration API. Requires Snapchat approval; ordinary friend DMs are not supported.</small></div><span className="pending">Approval required</span></div>{authMode==='owner'&&<SnapchatCollaboration request={request} onError={setError}/>}</div><div className="card statCard"><span className="kicker">DELIVERY SAFETY</span><h3>Dry-run</h3><p className="muted">Replies are generated and logged without being sent while this is enabled.</p><div className="settingRow"><span>Dry-run mode</span><button className={settings.dry_run?'switch on':'switch'} aria-label="Dry-run mode" aria-pressed={settings.dry_run} onClick={()=>setSettings({...settings,dry_run:!settings.dry_run})}><i/></button></div><button className="secondary full" onClick={save} disabled={busy||loading}>Save delivery settings</button></div></div>}
+      {tab==='platforms' && <div className="pageGrid"><div className="card listCard"><div className="kicker">CONNECT YOUR SOCIALS</div><h2>Delivery channels</h2><p className="muted">Only official platform APIs are used. Credentials set does not verify ownership, permission or delivery. Live delivery requires controlled tests and owner approval.</p><SocialConnections data={health.social_connections} request={request} refresh={()=>refresh()} onError={setError}/>{authMode==='owner'&&<p className="muted">Legacy owner integrations remain configured separately in the backend environment. Their existing data is preserved. {['instagram','whatsapp','facebook'].map(key=><span key={key}> · {key}: {health.legacy_owner_connections?.[key]?'Credentials set':'Setup needed'}</span>)}</p>}<div className="platformRow"><div className="platformBrand">◉</div><div><b>Snapchat</b><small>Official brand–creator collaboration API. Requires Snapchat approval; ordinary friend DMs are not supported.</small></div><span className="pending">Approval required</span></div>{authMode==='owner'&&<SnapchatCollaboration request={request} onError={setError}/>}</div><div className="card statCard"><span className="kicker">DELIVERY SAFETY</span><h3>Dry-run</h3><p className="muted">Replies are generated and logged without being sent while this is enabled.</p><div className="settingRow"><span>Dry-run mode</span><button className={settings.dry_run?'switch on':'switch'} aria-label="Dry-run mode" aria-pressed={settings.dry_run} onClick={()=>setSettings({...settings,dry_run:!settings.dry_run})}><i/></button></div><button className="secondary full" onClick={save} disabled={busy||loading}>Save delivery settings</button></div></div>}
 
       {tab==='settings' && <div className="settingsGrid">
         <div className="card settingsCard"><div className="kicker">ROAST ENGINE</div>{authMode!=='owner'&&<><h3>Link your Google account</h3><p className="muted">Use the Google account matching your signed-in email.</p><GoogleSignIn link request={request} onSuccess={data=>{setToken(data.token);setNotice('Google account linked')}} onError={setError}/></>}<h2>Default behavior</h2><div className="formGrid"><label>AI provider<select value={health.provider||'gemini'} disabled><option>gemini</option><option>ollama</option></select></label><label>Default mode<select value={settings.roast_mode} onChange={e=>setSettings({...settings,roast_mode:e.target.value})}>{modes.map(m=><option key={m}>{m}</option>)}</select></label><label>Reply delay (seconds)<input type="number" min="0" max="60" value={settings.reply_delay_seconds} onChange={e=>setSettings({...settings,reply_delay_seconds:+e.target.value})}/></label><label>Cooldown (seconds)<input type="number" min="0" max="3600" value={settings.cooldown_seconds} onChange={e=>setSettings({...settings,cooldown_seconds:+e.target.value})}/></label></div><button className="primary" onClick={save} disabled={busy||loading}>Save settings</button></div>

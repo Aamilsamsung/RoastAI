@@ -13,7 +13,7 @@ AUTH={'Authorization':'Bearer '+settings.admin_token}
 @pytest.fixture
 def client():
     with TestClient(app) as c:
-        for table in ['messages','activity','preferences','webhook_jobs','processed_messages','generation_requests','provider_state']:
+        for table in ['messages','activity','preferences','webhook_jobs','processed_messages','generation_requests','provider_state','social_connections','social_oauth_states','social_page_candidates']:
             store.execute('DELETE FROM '+table)
         store.save_preferences(main.DEFAULT)
         limits.clear()
@@ -173,7 +173,7 @@ def test_adopts_original_v2_database_without_data_loss(tmp_path):
         assert connection.execute('SELECT text FROM messages').fetchone()[0]=='Original data'
         assert connection.execute('SELECT message FROM activity').fetchone()[0]=='Original log'
         assert connection.execute('SELECT message_id FROM processed_messages').fetchone()[0]=='old-mid'
-        assert connection.execute('SELECT version_num FROM alembic_version').fetchone()[0]=='0004'
+        assert connection.execute('SELECT version_num FROM alembic_version').fetchone()[0]=='0005'
 
 def test_message_cursor_pagination_and_validation(client):
     for i in range(125): store.add_message('local','pages','Owner','','incoming',str(i))
@@ -203,7 +203,8 @@ def test_accounts_isolate_history_settings_and_logout(client,monkeypatch):
     preferences=client.get('/api/settings',headers=a).json();preferences['intensity']=2
     assert client.put('/api/settings',headers=a,json=preferences).status_code==200
     assert client.get('/api/settings',headers=b).json()['intensity']!=2
-    assert client.post('/api/bot/start',headers=a).status_code==403
+    assert client.post('/api/bot/start',headers=a).status_code==200
+    assert client.get('/api/settings',headers=b).json()['enabled'] is False
     client.delete('/api/conversations',headers=b)
     assert len(client.get('/api/messages',headers=a).json())==2
     assert client.post('/api/auth/logout',headers=a).status_code==200
@@ -365,7 +366,8 @@ def test_account_expiry_hashes_and_deep_isolation(client,monkeypatch):
     assert client.get('/api/messages?sender_id=private-thread',headers=b).json()==[]
     assert client.get('/api/conversations',headers=b).json()==[]
     assert client.get('/api/activity',headers=b).json()==[]
-    assert client.post('/api/bot/start',headers=b).status_code==403
+    assert client.post('/api/bot/start',headers=b).status_code==200
+    assert client.get('/api/settings',headers=a).json()['enabled'] is False
     assert client.get('/api/snapchat/messages?creator_profile_id='+str(uuid.uuid4()),headers=b).status_code==403
     assert client.post('/api/roast',headers=b,json=payload).status_code==200 # same request ID is scoped to its own account
     store.execute('UPDATE sessions SET expires=:t WHERE user_id=:u',t=time.time()-1,u=user['id'])
@@ -525,3 +527,240 @@ def test_access_logs_redact_webhook_verification_and_private_queries():
     AccessLogPrivacyFilter().filter(record)
     assert 'private-verify-token' not in record.getMessage() and 'hub.challenge' not in record.getMessage()
     assert '/webhook/meta' in record.getMessage() and '200' in record.getMessage()
+
+# Official Instagram calls below are labelled local test doubles, never real sends.
+def social_config(monkeypatch):
+    from app import social
+    for k,v in {'social_token_encryption_key':'test-encryption-key-at-least-32-characters','instagram_client_id':'12345','instagram_client_secret':'test-app-secret','backend_url':'https://backend.example.com','meta_verify_token':'test-verify'}.items():monkeypatch.setattr(settings,k,v)
+    return social
+
+def social_user(client):
+    import secrets
+    email=secrets.token_hex(8)+'@example.com'
+    r=client.post('/api/auth/signup',json={'email':email,'password':'test-password-over-12-characters'});assert r.status_code==200
+    return {'Authorization':'Bearer '+r.json()['token']},store.query('SELECT id FROM users WHERE email=:e',e=email)[0]['id']
+
+def attach(social,uid,account):
+    import time
+    context=store.owner.set(uid)
+    try:social.persist(account,'qa_creator','test-private-token',time.time()+3600);return social.listing()['connections'][0]
+    finally:store.owner.reset(context)
+
+def test_personal_bot_and_emergency_isolation(client):
+    a,_=social_user(client);b,_=social_user(client)
+    assert client.post('/api/bot/start',headers=a).json()['enabled']
+    assert not client.get('/api/settings',headers=b).json()['enabled']
+    assert not client.get('/api/settings',headers=AUTH).json()['enabled']
+    assert client.post('/api/bot/emergency-stop',headers=a).json()['emergency_stop']
+    assert not client.get('/api/settings',headers=b).json()['emergency_stop']
+    assert not client.post('/api/bot/start',headers=a).json()['emergency_stop']
+    assert not client.post('/api/bot/stop',headers=a).json()['enabled']
+
+def test_encrypted_social_account_isolation_and_claim_conflict(client,monkeypatch):
+    social=social_config(monkeypatch);a,aid=social_user(client);b,bid=social_user(client)
+    attach(social,aid,'123456')
+    row=store.query('SELECT * FROM social_connections')[0]
+    assert 'test-private-token' not in row['token_ciphertext'] and social.decrypt(row)=='test-private-token'
+    r=client.get('/api/social/connections',headers=a);assert len(r.json()['connections'])==1 and 'token' not in json.dumps(r.json()['connections'])
+    assert client.get('/api/social/connections',headers=b).json()['connections']==[]
+    with pytest.raises(__import__('fastapi').HTTPException) as e:attach(social,bid,'123456')
+    assert e.value.status_code==409 and store.query('SELECT owner_id FROM social_connections')[0]['owner_id']==aid
+    assert not client.get('/api/platforms/status',headers=b).json()['instagram']
+    assert client.get('/api/platforms/status',headers=a).json()['instagram']
+    client.post('/api/bot/start',headers=a);client.post('/api/bot/start',headers=b)
+    client.delete('/api/social/connections/instagram',headers=b)
+    assert len(client.get('/api/social/connections',headers=a).json()['connections'])==1
+    assert client.get('/api/settings',headers=a).json()['enabled']
+    client.delete('/api/social/connections/instagram',headers=a)
+    assert client.get('/api/social/connections',headers=a).json()['connections']==[]
+    assert not client.get('/api/settings',headers=a).json()['enabled']
+
+def test_setup_and_invalid_oauth_are_honest(client,monkeypatch):
+    monkeypatch.setattr(settings,'social_token_encryption_key','')
+    a,_=social_user(client)
+    assert client.post('/api/social/instagram/connect',headers=a).status_code==503
+    assert not client.get('/api/social/connections',headers=a).json()['instagram_oauth_configured']
+    assert client.get('/oauth/instagram/callback?state=invalid&code=test').status_code==400
+
+def test_oauth_state_owner_bound_single_use_expiry(client,monkeypatch):
+    from urllib.parse import urlparse,parse_qs
+    social=social_config(monkeypatch);a,aid=social_user(client)
+    q=parse_qs(urlparse(client.post('/api/social/instagram/connect',headers=a).json()['url']).query)
+    assert q['redirect_uri']==['https://backend.example.com/oauth/instagram/callback']
+    assert 'instagram_business_manage_messages' in q['scope'][0]
+    state=q['state'][0];assert state not in json.dumps(store.query('SELECT * FROM social_oauth_states'))
+    assert social.consume(state)==aid
+    with pytest.raises(__import__('fastapi').HTTPException):social.consume(state)
+    state=parse_qs(urlparse(client.post('/api/social/instagram/connect',headers=a).json()['url']).query)['state'][0]
+    store.execute('UPDATE social_oauth_states SET expires_at=0')
+    with pytest.raises(__import__('fastapi').HTTPException):social.consume(state)
+
+@pytest.mark.parametrize('fault',[None,'permissions','identity','subscription'])
+def test_oauth_provider_success_failures_and_no_secrets(client,monkeypatch,fault):
+    from urllib.parse import urlparse,parse_qs
+    social=social_config(monkeypatch);a,aid=social_user(client);calls=[]
+    async def graph(client,method,url,**kwargs):
+        calls.append(url)
+        if url=='https://api.instagram.com/oauth/access_token':return {'access_token':'short-secret','user_id':'777777','permissions':['instagram_business_basic'] if fault=='permissions' else ['instagram_business_basic','instagram_business_manage_messages']}
+        if url.endswith('/access_token'):return {'access_token':'long-secret','expires_in':3600}
+        if url.endswith('/me'):return {'user_id':'999999' if fault=='identity' else '777777','username':'qa_creator'}
+        if url.endswith('/subscribed_apps'):return {'success':fault!='subscription'}
+        raise AssertionError(url)
+    monkeypatch.setattr(social,'graph',graph)
+    state=parse_qs(urlparse(client.post('/api/social/instagram/connect',headers=a).json()['url']).query)['state'][0]
+    r=client.get('/oauth/instagram/callback',params={'state':state,'code':'local-test-code'},follow_redirects=False)
+    assert r.status_code==303 and 'social='+('failed' if fault else 'connected') in r.headers['location']
+    assert 'secret' not in r.text+r.headers['location']
+    assert len(client.get('/api/social/connections',headers=a).json()['connections'])==(0 if fault else 1)
+    assert 'secret' not in client.get('/api/activity',headers=a).text
+    assert all(not url.endswith('/messages') for url in calls)
+
+def test_tenant_webhook_signature_routing_duplicate_and_window(client,monkeypatch):
+    import time
+    social=social_config(monkeypatch);a,aid=social_user(client);b,_=social_user(client)
+    attach(social,aid,'888888')
+    payload={'object':'instagram','entry':[{'id':'888888','messaging':[{'timestamp':time.time()*1000,'sender':{'id':'friend'},'message':{'mid':'test-mid','text':'hello'}}]}]}
+    body=json.dumps(payload).encode();signature='sha256='+hmac.new(settings.instagram_client_secret.encode(),body,hashlib.sha256).hexdigest()
+    assert client.post('/webhook/meta',content=body,headers={'x-hub-signature-256':signature}).json()['accepted']==1
+    assert client.post('/webhook/meta',content=body,headers={'x-hub-signature-256':signature}).json()['accepted']==0
+    event=json.loads(store.query('SELECT data FROM webhook_jobs')[0]['data']);assert event['owner_id']==aid
+    asyncio.run(process_job(event))
+    assert client.get('/api/messages?platform=instagram&sender_id=888888:friend',headers=a).json()
+    assert client.get('/api/messages?platform=instagram&sender_id=888888:friend',headers=b).json()==[]
+    assert client.get('/api/messages?platform=instagram&sender_id=888888:friend',headers=AUTH).json()==[]
+    other=json.dumps({'object':'page'}).encode();signature='sha256='+hmac.new(settings.instagram_client_secret.encode(),other,hashlib.sha256).hexdigest()
+    assert client.post('/webhook/meta',content=other,headers={'x-hub-signature-256':signature}).status_code==403
+
+def test_user_worker_voice_dry_run_and_disconnected_cancellation(client,monkeypatch):
+    import time
+    social=social_config(monkeypatch);a,aid=social_user(client);b,_=social_user(client);calls=[]
+    row=attach(social,aid,'555555');context=store.owner.set(aid)
+    try:update({'enabled':True,'roast_mode':'deadpan','reply_delay_seconds':0,'cooldown_seconds':0,'dry_run':False})
+    finally:store.owner.reset(context)
+    monkeypatch.setattr(settings,'social_delivery_approved',False)
+    monkeypatch.setattr(main,'generate_with_meaning',lambda message,cfg,*args:(calls.append((store.owner.get(),cfg.roast_mode)) or 'reply','meaning'))
+    async def forbidden(*args):raise AssertionError('No live sends allowed')
+    monkeypatch.setattr(social,'send',forbidden)
+    event={'platform':'instagram','sender_id':'friend','sender_name':'','message_id':'test-worker','text':'hi','owner_id':aid,'connection_id':row['id'],'received_at':time.time()}
+    asyncio.run(process_job(event));assert calls==[(aid,'deadpan')]
+    assert len(client.get('/api/messages?platform=instagram&sender_id=friend',headers=a).json())==2
+    assert client.get('/api/messages?platform=instagram&sender_id=friend',headers=b).json()==[]
+    assert any(e['category']=='DRY_RUN' for e in client.get('/api/activity',headers=a).json())
+    client.delete('/api/social/connections/instagram',headers=a)
+    asyncio.run(process_job(event));assert len(calls)==1
+    asyncio.run(process_job({**event,'connection_id':None,'received_at':time.time()-24*3600}));assert len(calls)==1
+
+def meta_social_config(monkeypatch):
+    social=social_config(monkeypatch)
+    for k,v in {'meta_app_id':'12345','meta_app_secret':'test-meta-app-secret','whatsapp_signup_config_id':'test-business-config'}.items():monkeypatch.setattr(settings,k,v)
+    return social
+
+@pytest.mark.parametrize('fault',[None,'permission','no_pages','subscription'])
+def test_facebook_page_oauth_selection_and_isolation(client,monkeypatch,fault):
+    from urllib.parse import urlparse,parse_qs
+    social=meta_social_config(monkeypatch);a,aid=social_user(client);b,bid=social_user(client);calls=[]
+    async def graph(client,method,url,**kwargs):
+        calls.append(url)
+        if url.endswith('/oauth/access_token'):return {'access_token':'test-fb-user-secret','expires_in':3600}
+        if url.endswith('/me/permissions'):return {'data':[{'permission':p,'status':'granted'} for p in (['pages_show_list'] if fault=='permission' else ['pages_show_list','pages_messaging','pages_manage_metadata'])]}
+        if url.endswith('/me/accounts'):return {'data':[] if fault=='no_pages' else [{'id':'987654','name':'QA Page','access_token':'test-page-secret','tasks':['MESSAGE']}]}
+        if url.endswith('/subscribed_apps'):return {'success':fault!='subscription'}
+        raise AssertionError(url)
+    monkeypatch.setattr(social,'graph',graph)
+    q=parse_qs(urlparse(client.post('/api/social/facebook/connect',headers=a).json()['url']).query)
+    assert q['redirect_uri']==['https://backend.example.com/oauth/facebook/callback']
+    callback=client.get('/oauth/facebook/callback',params={'state':q['state'][0],'code':'test-fb-code'},follow_redirects=False)
+    assert callback.status_code==303
+    if fault in ('permission','no_pages'):
+        assert 'social=failed' in callback.headers['location'];return
+    assert 'social=select_page' in callback.headers['location']
+    data=client.get('/api/social/connections',headers=a).json();candidate=data['facebook_candidates'][0]
+    assert 'test-page-secret' not in json.dumps(data)
+    assert client.get('/api/social/connections',headers=b).json()['facebook_candidates']==[]
+    assert client.post('/api/social/facebook/select',headers=b,json={'candidate_id':candidate['id']}).status_code==404
+    selected=client.post('/api/social/facebook/select',headers=a,json={'candidate_id':candidate['id']})
+    assert selected.status_code==(502 if fault=='subscription' else 200)
+    rows=client.get('/api/social/connections',headers=a).json()['connections']
+    assert len(rows)==(0 if fault else 1)
+    assert not any(url.endswith('/messages') for url in calls)
+    if not fault:assert rows[0]['platform']=='facebook' and rows[0]['account_id']=='987654'
+
+@pytest.mark.parametrize('fault',[None,'app','scope','phone','expired','registration','subscription'])
+def test_whatsapp_signup_verifies_app_ownership_scopes_phone_and_ack(client,monkeypatch,fault):
+    import time
+    social=meta_social_config(monkeypatch);a,aid=social_user(client);calls=[]
+    async def graph(client,method,url,**kwargs):
+        calls.append(url)
+        if url.endswith('/oauth/access_token'):return {'access_token':'test-whatsapp-secret'}
+        if url.endswith('/debug_token'):return {'data':{'is_valid':True,'app_id':'other' if fault=='app' else settings.meta_app_id,'scopes':['whatsapp_business_management'] if fault=='scope' else ['whatsapp_business_management','whatsapp_business_messaging'],'expires_at':time.time()-100 if fault=='expired' else time.time()+3600}}
+        if url.endswith('/phone_numbers'):return {'data':[{'id':'wrong' if fault=='phone' else '654321','verified_name':'QA Business'}]}
+        if url.endswith('/register'):
+            assert kwargs['json']['pin']=='123456';return {'success':fault!='registration'}
+        if url.endswith('/subscribed_apps'):return {'success':fault!='subscription'}
+        raise AssertionError(url)
+    monkeypatch.setattr(social,'graph',graph)
+    start=client.post('/api/social/whatsapp/connect',headers=a).json()
+    result=client.post('/api/social/whatsapp/complete',headers=a,json={'state':start['state'],'code':'test-code','phone_number_id':'654321','waba_id':'666666','pin':'123456'})
+    assert result.status_code==(200 if not fault else 502 if fault in ('registration','subscription') else 403),result.text
+    assert 'secret' not in result.text and '123456' not in result.text
+    data=client.get('/api/social/connections',headers=a).json();assert len(data['connections'])==(0 if fault else 1)
+    assert 'test-whatsapp-secret' not in json.dumps(data)
+    assert not any(url.endswith('/messages') for url in calls)
+    if not fault:assert data['connections'][0]['platform']=='whatsapp'
+
+def test_whatsapp_nonce_cannot_be_used_by_another_user(client,monkeypatch):
+    meta_social_config(monkeypatch);a,_=social_user(client);b,_=social_user(client)
+    start=client.post('/api/social/whatsapp/connect',headers=a).json()
+    assert client.post('/api/social/whatsapp/complete',headers=b,json={'state':start['state'],'code':'test','phone_number_id':'1','waba_id':'2','pin':'123456'}).status_code in (400,403)
+
+@pytest.mark.parametrize('platform',['instagram','facebook','whatsapp'])
+def test_connected_platforms_route_to_only_the_registered_user(client,monkeypatch,platform):
+    import time
+    social=meta_social_config(monkeypatch);a,aid=social_user(client);b,bid=social_user(client)
+    context=store.owner.set(aid)
+    try:social.persist('444444','qa','test-token',time.time()+3600,platform)
+    finally:store.owner.reset(context)
+    if platform=='whatsapp':payload={'object':'whatsapp_business_account','entry':[{'changes':[{'value':{'metadata':{'phone_number_id':'444444'},'messages':[{'id':'m','from':'friend','type':'text','timestamp':str(int(time.time())),'text':{'body':'hello'}}]}}]}]}
+    else:payload={'object':'instagram' if platform=='instagram' else 'page','entry':[{'id':'444444','messaging':[{'timestamp':time.time()*1000,'sender':{'id':'friend'},'message':{'mid':'m','text':'hello'}}]}]}
+    body=json.dumps(payload).encode();key=settings.instagram_client_secret if platform=='instagram' else settings.meta_app_secret
+    signature='sha256='+hmac.new(key.encode(),body,hashlib.sha256).hexdigest()
+    response=client.post('/webhook/meta',content=body,headers={'x-hub-signature-256':signature});assert response.json()['accepted']==1,response.text
+    event=json.loads(store.query('SELECT data FROM webhook_jobs')[0]['data']);assert event['owner_id']==aid and event['platform']==platform
+    asyncio.run(process_job(event))
+    assert client.get('/api/messages?platform='+platform+'&sender_id=444444:friend',headers=a).json()
+    assert client.get('/api/messages?platform='+platform+'&sender_id=444444:friend',headers=b).json()==[]
+
+
+def test_logout_invalidates_pending_social_authorization(client,monkeypatch):
+    from urllib.parse import urlparse,parse_qs
+    social=social_config(monkeypatch);a,aid=social_user(client)
+    state=parse_qs(urlparse(client.post('/api/social/instagram/connect',headers=a).json()['url']).query)['state'][0]
+    assert client.post('/api/auth/logout',headers=a).status_code==200
+    assert client.get('/oauth/instagram/callback',params={'state':state,'code':'test-code'}).status_code==400
+    assert client.get('/api/social/connections',headers=a).status_code==401
+
+
+def test_replaced_connection_cancels_dry_run_after_ai(client,monkeypatch):
+    import time
+    social=social_config(monkeypatch);a,aid=social_user(client);row=attach(social,aid,'333333')
+    context=store.owner.set(aid)
+    try:update({'enabled':True,'reply_delay_seconds':0,'cooldown_seconds':0,'dry_run':True})
+    finally:store.owner.reset(context)
+    def ai(*args):
+        social.persist('333333','reauthorized','new-test-token',time.time()+3600)
+        return 'reply','meaning'
+    monkeypatch.setattr(main,'generate_with_meaning',ai)
+    asyncio.run(process_job({'platform':'instagram','sender_id':'friend','sender_name':'','message_id':'replaced','text':'hi','owner_id':aid,'connection_id':row['id'],'received_at':time.time()}))
+    assert len(client.get('/api/messages?platform=instagram&sender_id=friend',headers=a).json())==1
+    assert not any(e['category']=='DRY_RUN' for e in client.get('/api/activity',headers=a).json())
+
+
+@pytest.mark.parametrize('status,body',[(403,{'error':{'message':'test-private-token'}}),(200,{'error':{'message':'test-private-token'}}),(200,['test-private-token'])])
+def test_meta_transport_errors_never_expose_secrets(status,body):
+    import httpx
+    from app import social
+    async def run():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(lambda request:httpx.Response(status,json=body))) as client:
+            with pytest.raises(__import__('fastapi').HTTPException) as error:await social.graph(client,'GET','https://graph.facebook.com/test',params={'access_token':'test-private-token'})
+            assert error.value.status_code==502 and 'test-private-token' not in error.value.detail
+    asyncio.run(run())

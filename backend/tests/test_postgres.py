@@ -70,7 +70,7 @@ with TestClient(app) as client:
     assert client.get('/health').status_code==200
     assert client.get('/api/settings',headers={'Authorization':'Bearer '+os.environ['ADMIN_TOKEN']}).json()['custom_instructions']=='Persistent voice'
 # Additive reliability migration and atomic scoped replay survive PostgreSQL restart.
-assert store.query('SELECT version_num FROM alembic_version')[0]['version_num']=='0004'
+assert store.query('SELECT version_num FROM alembic_version')[0]['version_num']=='0005'
 assert store.claim_request('pg-request','fingerprint') is None
 assert store.claim_request('pg-request','fingerprint')['status']=='processing'
 store.finish_request('pg-request',{'reply':'safe'},'incoming safe','safe','pg-thread')
@@ -82,6 +82,28 @@ assert store.claim_request('pg-request','fingerprint') is None
 store.owner.set(0)
 store.init_db()
 assert store.claim_request('pg-request','fingerprint')['status']=='done'
+import hashlib,json
+from app import social
+from app.config import settings
+import time
+settings.social_token_encryption_key='postgres-test-encryption-key-32-characters'
+store.owner.set(7)
+social.persist('7654321','PG test creator','test-provider-token',time.time()+3600)
+assert len(social.listing()['connections'])==1
+assert 'token' not in json.dumps(social.listing()['connections'])
+store.owner.set(8)
+assert social.listing()['connections']==[]
+try:
+    social.persist('7654321','Other workspace','test-provider-token',time.time()+3600)
+    raise AssertionError('Another owner claimed the same account')
+except __import__('fastapi').HTTPException as error:
+    assert error.status_code==409
+store.owner.set(7)
+store.init_db()
+assert len(social.listing()['connections'])==1
+store.execute('INSERT INTO social_oauth_states VALUES(:d,:o,:p,:t)',d=hashlib.sha256(b'pg-state').hexdigest(),o=7,p='instagram',t=time.time()+300)
+assert social.consume('pg-state')==7
+store.owner.set(0)
 print('PostgreSQL migration, import sequences, persistence, concurrent locks, deduplication and restart checks passed')
 '''
             env={**os.environ,'DATABASE_URL':test_url,'ENVIRONMENT':'test','ADMIN_TOKEN':'test-postgres-workspace-token-32-characters',

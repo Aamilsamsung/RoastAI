@@ -1,3 +1,5 @@
+> Historical audit of the pre-connection release. The later user-owned social-connection build supersedes owner-only bot restrictions; see SOCIAL-CONNECTIONS.md and SOCIAL-VALIDATION.md for current behavior and evidence.
+
 # RoastAI implementation and acceptance report — 2026-10-12
 
 This report concerns the actual Aamilsamsung/RoastAI source and the frontend/backend services on Render, not a recreated demo. Core fixes are deployed; externally blocked commercial requirements are not represented as completed. See the evidence JSON files in this directory. The deployed prompt was tested at commit c56285491e12636126451a6a2a2b2ec42ccb20b9; subsequent handover/error-display updates retain the same provider and prompt behavior.

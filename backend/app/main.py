@@ -3,15 +3,15 @@ from contextlib import asynccontextmanager
 from types import SimpleNamespace
 from collections import defaultdict, deque
 from fastapi import FastAPI, Request, HTTPException, Query
-from fastapi.responses import PlainTextResponse, JSONResponse
+from fastapi.responses import PlainTextResponse, JSONResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.concurrency import run_in_threadpool
 from .config import settings
-from .models import BotSettings, RoastRequest
+from .models import BotSettings, RoastRequest, PageSelection, WhatsAppSignup
 from .ai import generate_with_meaning, provider_error_detail, provider_trace
 from .meta import verify_signature, parse_events, whatsapp_send, instagram_send, facebook_send
 from . import store
-from . import accounts, snapchat
+from . import accounts, snapchat, social
 from uuid import UUID
 from .observability import AccessLogPrivacyFilter
 logging.getLogger('uvicorn.access').addFilter(AccessLogPrivacyFilter())
@@ -30,7 +30,21 @@ def update(changes,protect_stop=False):
 def allowed(cfg,platform): return cfg['enabled'] and not cfg['emergency_stop'] and cfg[platform+'_enabled']
 
 async def process_job(event):
+    context=store.owner.set(event.get("owner_id",0))
+    try:
+        await process_owned_job(event)
+    except Exception:
+        store.log("ERROR","Social reply failed; check permissions, token expiry and provider status")
+        raise
+    finally:
+        store.owner.reset(context)
+
+async def process_owned_job(event):
     platform=event['platform']; sender=event['sender_id']; cfg=current()
+    connection_id=event.get('connection_id')
+    if connection_id and not social.connection(connection_id):return
+    if event.get('received_at') and time.time()-event['received_at']>23*3600:
+        store.log('DELIVERY','Reply cancelled: incoming messaging window expired');return
     store.add_message(platform,sender,event['sender_name'],event['message_id'],'incoming',event['text'])
     if not allowed(cfg,platform):
         store.log('DELIVERY','Incoming message recorded; bot or platform paused'); return
@@ -42,15 +56,27 @@ async def process_job(event):
         store.log('DELIVERY','Sender cooldown applied'); return
     await asyncio.sleep(cfg['reply_delay_seconds'])
     if not allowed(current(),platform) or current()['safety_epoch']!=cfg['safety_epoch']: return
+    bucket=limits['generation:'+str(store.owner.get())];now=time.monotonic()
+    while bucket and bucket[0]<now-60:bucket.popleft()
+    if len(bucket)>=settings.rate_limit_per_minute:
+        store.log('DELIVERY','Workspace generation limit reached; incoming message retained');return
+    bucket.append(now)
     reply,meaning=await run_in_threadpool(generate_with_meaning,event['text'],SimpleNamespace(**cfg),event['sender_name'],history,cfg['input_language'],cfg['reply_language'],cfg['script_mode'])
     live=current()
+    if connection_id and not social.connection(connection_id):
+        store.log('DELIVERY','Reply cancelled: connection was replaced or removed');return
     if not allowed(live,platform) or live['safety_epoch']!=cfg['safety_epoch']:
         store.log('DELIVERY','Reply cancelled by stop or delivery-setting change'); return
     if cfg['dry_run'] or not settings.social_delivery_approved:
         store.log('DRY_RUN',f'{platform} reply generated without delivery')
     else:
-        send={'whatsapp':whatsapp_send,'instagram':instagram_send,'facebook':facebook_send}[platform]
-        await send(sender,reply)
+        if connection_id:
+            row=social.connection(connection_id)
+            if not row:return
+            await social.send(row,event.get('recipient_id',sender),reply)
+        else:
+            send={'whatsapp':whatsapp_send,'instagram':instagram_send,'facebook':facebook_send}[platform]
+            await send(sender,reply)
         store.log('DELIVERY',f'{platform} reply accepted by Meta')
     store.add_message(platform,sender,'RoastAI','','outgoing',reply)
 
@@ -67,7 +93,6 @@ async def worker():
         except asyncio.CancelledError: raise
         except Exception:
             # Raw upstream exceptions can contain credential-bearing URLs; never persist them.
-            store.log('ERROR','Social reply failed; check credentials, permissions and provider availability')
             store.execute("UPDATE webhook_jobs SET status='failed' WHERE message_id=:m",m=mid)
 
 @asynccontextmanager
@@ -126,9 +151,8 @@ async def protect(request: Request, call_next):
         if not public and not admin and user is None:
             return JSONResponse({'detail':'Sign in required','request_id':request.state.request_id},status_code=401)
         store.owner.set(user or 0)
-        if user and (request.url.path.startswith(('/api/bot/','/api/snapchat/')) or request.url.path=='/api/platforms/status'):
-            if request.url.path.startswith(('/api/bot/','/api/snapchat/')):
-                return JSONResponse({'detail':'Social bot controls are owner-only'},status_code=403)
+        if user and request.url.path.startswith('/api/snapchat/'):
+            return JSONResponse({'detail':'Snapchat collaboration controls are owner-only'},status_code=403)
 
         if public:
             auth_bucket=limits['auth:'+key]
@@ -168,7 +192,10 @@ def login(x:accounts.Credentials): return accounts.sign_in(x)
 def logout(request:Request):
     import hashlib
     token=request.headers.get('authorization','').removeprefix('Bearer ')
-    store.execute('DELETE FROM sessions WHERE digest=:d',d=hashlib.sha256(token.encode()).hexdigest())
+    with store.engine.begin() as c:
+        c.execute(store.text('DELETE FROM sessions WHERE digest=:d'),{'d':hashlib.sha256(token.encode()).hexdigest()})
+        c.execute(store.text('DELETE FROM social_oauth_states WHERE owner_id=:o'),{'o':store.owner.get()})
+        c.execute(store.text('DELETE FROM social_page_candidates WHERE owner_id=:o'),{'o':store.owner.get()})
     return {'ok':True}
 @app.get('/')
 @app.get('/health')
@@ -239,10 +266,19 @@ def clear():
     store.clear_history(); store.log('HISTORY','Conversation history cleared'); return {'ok':True}
 @app.get('/api/platforms/status')
 def platforms():
-    return {'gemini':bool(settings.gemini_api_key and settings.gemini_model),'ollama':settings.ai_provider=='ollama' and bool(settings.ollama_base_url),
+    value= {'gemini':bool(settings.gemini_api_key and settings.gemini_model),'ollama':settings.ai_provider=='ollama' and bool(settings.ollama_base_url),
         'whatsapp':bool(settings.whatsapp_access_token and settings.whatsapp_phone_number_id),'instagram':bool(settings.instagram_access_token and settings.instagram_account_id),
         'facebook':bool(settings.facebook_page_access_token and settings.facebook_page_id),'snapchat':bool(settings.snapchat_access_token and settings.snapchat_profile_id),'snapchat_capability':'creator_collaboration_approval_required',
         'environment':settings.environment,'database_backend':store.engine.dialect.name,'provider':settings.ai_provider,'provider_health':store.provider_status(),'delivery_approved':settings.social_delivery_approved,'status_kind':'configuration_only_not_connection_verified'}
+    if store.owner.get()==0:
+        value['legacy_owner_connections']={key:value[key] for key in ('whatsapp','instagram','facebook')}
+    if store.owner.get()!=0:
+        for key in ('whatsapp','instagram','facebook','snapchat'):value[key]=False
+    connections=social.listing()
+    for row in connections['connections']:
+        if row['status']=='authorization_verified':value[row['platform']]=True
+    value['social_connections']=connections
+    return value
 @app.get('/webhook/meta',response_class=PlainTextResponse)
 async def verify(request:Request):
     q=request.query_params
@@ -256,14 +292,37 @@ async def webhook(request:Request):
     async for chunk in request.stream():
         body.extend(chunk)
         if len(body)>1_000_000: raise HTTPException(413,'Webhook too large')
-    if not verify_signature(bytes(body),request.headers.get('x-hub-signature-256')): raise HTTPException(403,'Invalid webhook signature')
+    signature=request.headers.get('x-hub-signature-256')
+    meta_valid=verify_signature(bytes(body),signature)
+    instagram_valid=bool(settings.instagram_client_secret) and verify_signature(bytes(body),signature,settings.instagram_client_secret)
+    if not meta_valid and not instagram_valid:raise HTTPException(403,'Invalid webhook signature')
     try:
         payload=json.loads(body)
         if not isinstance(payload,dict): raise ValueError()
+        if payload.get('object')!='instagram' and not meta_valid:raise HTTPException(403,'Invalid platform webhook signature')
         events=parse_events(payload)
+        # One account belongs to one workspace. Legacy owner integration remains intact.
+        rows=store.query('SELECT * FROM social_connections WHERE expires_at>:t',t=time.time())
+        legacy={'instagram':settings.instagram_account_id,'whatsapp':settings.whatsapp_phone_number_id,'facebook':settings.facebook_page_id}
+        claimed={(r['platform'],r['account_id']) for r in rows}
+        events=[e for e in events if (e['platform'],legacy[e['platform']]) not in claimed]
+        for row in rows:
+            cfg=SimpleNamespace(whatsapp_phone_number_id=row['account_id'] if row['platform']=='whatsapp' else '',instagram_account_id=row['account_id'] if row['platform']=='instagram' else '',facebook_page_id=row['account_id'] if row['platform']=='facebook' else '')
+            for event in parse_events(payload,cfg):
+                timestamp=event.pop('event_timestamp',None)
+                try:timestamp=float(timestamp)
+                except (TypeError,ValueError):continue
+                if timestamp<=0:continue
+                event.update(owner_id=row['owner_id'],connection_id=row['id'],received_at=min(timestamp if event['platform']=='whatsapp' else timestamp/1000,time.time()))
+                if event['message_id']:event['message_id']=hashlib.sha256((row['platform']+':'+row['account_id']+':'+event['message_id']).encode()).hexdigest()
+                if isinstance(event['sender_id'],str):
+                    event['recipient_id']=event['sender_id']
+                    event['sender_id']=row['account_id']+':'+event['sender_id']
+                events.append(event)
     except (ValueError,TypeError,AttributeError): raise HTTPException(400,'Malformed webhook')
     accepted=0
     for event in events:
+        event.setdefault('received_at',time.time())
         if any(not isinstance(event[k],str) for k in ('message_id','sender_id','text','sender_name')): continue
         if not event['message_id'] or len(event['message_id'])>512 or not event['sender_id'] or len(event['sender_id'])>200 or not event['text'].strip() or len(event['text'])>5000: continue
         if not store.processed(event['message_id']) and store.enqueue(event): accepted+=1
@@ -295,3 +354,47 @@ async def snapchat_message(x:snapchat.Collaboration):
     store.add_message('snapchat',sender,'Creator','','outgoing',x.message)
     store.log('DELIVERY','Snapchat accepted collaboration message')
     return result
+
+
+@app.get('/api/social/connections')
+def social_connections():return social.listing()
+@app.post('/api/social/instagram/connect')
+def instagram_connect():return social.begin()
+@app.delete('/api/social/connections/{platform}')
+def social_disconnect(platform:str):
+    if platform not in ('instagram','facebook','whatsapp'):raise HTTPException(422,'Unsupported connection platform')
+    update({'enabled':False})
+    return social.disconnect(platform)
+@app.get('/oauth/instagram/callback')
+async def instagram_callback(state:str='',code:str='',error:str=''):
+    account=social.consume(state)
+    context=store.owner.set(account)
+    try:
+        if error:raise HTTPException(400,'Instagram permission was declined')
+        await social.complete(code)
+        result='connected'
+    except HTTPException:
+        store.log('CONNECTION','Instagram connection failed; check app permissions, consent and eligibility')
+        result='failed'
+    finally:store.owner.reset(context)
+    return RedirectResponse(settings.frontend_url.rstrip('/')+'/?social='+result,status_code=303,headers={'Cache-Control':'no-store','Referrer-Policy':'no-referrer'})
+
+@app.post('/api/social/facebook/connect')
+def facebook_connect():return social.facebook_begin()
+@app.get('/oauth/facebook/callback')
+async def facebook_callback(state:str='',code:str='',error:str=''):
+    account=social.consume(state,'facebook');context=store.owner.set(account)
+    try:
+        if error or not code or len(code)>4096:raise HTTPException(400,'Facebook authorization was declined or invalid')
+        await social.facebook_complete(code)
+        result='select_page'
+    except HTTPException:
+        store.log('CONNECTION','Facebook connection failed; check Page ownership, permissions and app configuration');result='failed'
+    finally:store.owner.reset(context)
+    return RedirectResponse(settings.frontend_url.rstrip('/')+'/?social='+result,status_code=303,headers={'Cache-Control':'no-store','Referrer-Policy':'no-referrer'})
+@app.post('/api/social/facebook/select')
+async def facebook_select(x:PageSelection):return await social.facebook_select(x.candidate_id)
+@app.post('/api/social/whatsapp/connect')
+def whatsapp_connect():return social.whatsapp_begin()
+@app.post('/api/social/whatsapp/complete')
+async def whatsapp_complete(x:WhatsAppSignup):return await social.whatsapp_complete(x)

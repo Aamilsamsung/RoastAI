@@ -21,3 +21,12 @@ class RoastRequest(BaseModel):
     def meaningful_message(cls, value):
         if not value.strip(): raise ValueError('Message cannot be blank')
         return value
+
+class PageSelection(BaseModel):
+    candidate_id:str=Field(min_length=36,max_length=36,pattern=r"^[a-fA-F0-9-]{36}$")
+class WhatsAppSignup(BaseModel):
+    state:str=Field(min_length=32,max_length=200)
+    code:str=Field(min_length=1,max_length=4096)
+    phone_number_id:str=Field(pattern=r"^[0-9]{1,64}$")
+    waba_id:str=Field(pattern=r"^[0-9]{1,64}$")
+    pin:str=Field(pattern=r"^[0-9]{6}$")

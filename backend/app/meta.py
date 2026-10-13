@@ -1,36 +1,38 @@
 import hashlib,hmac,httpx
 from .config import settings
 
-def verify_signature(body,signature):
-    if not settings.meta_app_secret or not signature: return False
-    expected="sha256="+hmac.new(settings.meta_app_secret.encode(),body,hashlib.sha256).hexdigest()
+def verify_signature(body,signature,secret=None):
+    secret=secret or settings.meta_app_secret
+    if not secret or not signature: return False
+    expected="sha256="+hmac.new(secret.encode(),body,hashlib.sha256).hexdigest()
     return hmac.compare_digest(expected.encode(),signature.encode())
 
-def parse_events(payload):
+def parse_events(payload,credentials=None):
+    cfg=credentials or settings
     out=[]
     if payload.get("object")=="whatsapp_business_account":
         for e in payload.get("entry",[]):
             for c in e.get("changes",[]):
                 phone=c.get("value",{}).get("metadata",{}).get("phone_number_id")
-                if not settings.whatsapp_phone_number_id or phone != settings.whatsapp_phone_number_id: continue
+                if not cfg.whatsapp_phone_number_id or phone != cfg.whatsapp_phone_number_id: continue
                 for m in c.get("value",{}).get("messages",[]):
                     if m.get("type")=="text":
                         out.append({"platform":"whatsapp","sender_id":m.get("from",""),"sender_name":"",
-                        "message_id":m.get("id",""),"text":m.get("text",{}).get("body","")})
+                        "message_id":m.get("id",""),"text":m.get("text",{}).get("body",""),"event_timestamp":m.get("timestamp")})
     elif payload.get("object") == "instagram":
         for e in payload.get("entry",[]):
-            if not settings.instagram_account_id or e.get("id") != settings.instagram_account_id: continue
+            if not cfg.instagram_account_id or e.get("id") != cfg.instagram_account_id: continue
             for m in e.get("messaging",[]):
                 t=m.get("message",{}).get("text")
-                if t and not m.get("message",{}).get("is_echo") and m.get("sender",{}).get("id") != settings.instagram_account_id: out.append({"platform":"instagram","sender_id":m.get("sender",{}).get("id",""),
-                "sender_name":"","message_id":m.get("message",{}).get("mid",""),"text":t})
-    elif payload.get('object') == 'page' and settings.facebook_page_id:
+                if t and not m.get("message",{}).get("is_echo") and m.get("sender",{}).get("id") != cfg.instagram_account_id: out.append({"platform":"instagram","sender_id":m.get("sender",{}).get("id",""),
+                "sender_name":"","message_id":m.get("message",{}).get("mid",""),"text":t,"event_timestamp":m.get("timestamp")})
+    elif payload.get('object') == 'page' and cfg.facebook_page_id:
         for entry in payload.get('entry',[]):
-            if str(entry.get('id',''))!=settings.facebook_page_id: continue
+            if str(entry.get('id',''))!=cfg.facebook_page_id: continue
             for event in entry.get('messaging',[]):
                 message=event.get('message',{})
-                if message.get('text') and not message.get('is_echo') and str(event.get('sender',{}).get('id',''))!=settings.facebook_page_id:
-                    out.append({'platform':'facebook','sender_id':event.get('sender',{}).get('id',''),'sender_name':'','message_id':message.get('mid',''),'text':message['text']})
+                if message.get('text') and not message.get('is_echo') and str(event.get('sender',{}).get('id',''))!=cfg.facebook_page_id:
+                    out.append({'platform':'facebook','sender_id':event.get('sender',{}).get('id',''),'sender_name':'','message_id':message.get('mid',''),'text':message['text'],'event_timestamp':event.get('timestamp')})
     return out
 
 async def whatsapp_send(recipient,text):

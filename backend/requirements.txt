@@ -12,3 +12,5 @@ alembic==1.20.0
 google-auth[requests]==2.59.1
 # Pin the installer to a patched version in reproducible deployment environments.
 pip==26.2.1
+
+cryptography==50.0.2
