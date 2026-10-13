@@ -1,0 +1,60 @@
+{
+  "checks": [
+    "backend health HTTP 200",
+    "Google client configuration preserved",
+    "QA account signup",
+    "QA account signup",
+    "GET /api/settings HTTP 200",
+    "user B starts paused",
+    "POST /api/bot/start HTTP 200",
+    "user A can enable own bot",
+    "GET /api/settings HTTP 200",
+    "user A cannot enable user B bot",
+    "POST /api/bot/emergency-stop HTTP 200",
+    "user A emergency stop works",
+    "GET /api/settings HTTP 200",
+    "user B emergency state unchanged",
+    "POST /api/bot/start HTTP 200",
+    "user A can clear own emergency stop",
+    "POST /api/bot/stop HTTP 200",
+    "user A can pause own bot",
+    "GET /api/platforms/status HTTP 200",
+    "production PostgreSQL active",
+    "live social delivery still disabled",
+    "GET /api/social/connections HTTP 200",
+    "fresh QA workspace has no inherited connections",
+    "missing Meta setup accurately reported",
+    "connections require authentication",
+    "unconfigured instagram connection blocked honestly",
+    "unconfigured facebook connection blocked honestly",
+    "unconfigured whatsapp connection blocked honestly",
+    "GET /api/settings HTTP 200",
+    "PUT /api/settings HTTP 200",
+    "manual Studio works with personal bot paused",
+    "GET /api/messages?platform=local&sender_id=qa-social-live HTTP 200",
+    "user B cannot read user A QA conversation"
+  ],
+  "passed": 33,
+  "generation": {
+    "http": 200,
+    "wall_seconds": 10.584,
+    "timing": {
+      "ai_ms": 10222,
+      "total_ms": 10232
+    },
+    "usage": {
+      "provider": "gemini",
+      "model": "gemini-3.5-flash-lite",
+      "attempts": 1,
+      "input_tokens": 295,
+      "output_tokens": 51,
+      "thinking_tokens": null,
+      "total_tokens": 346,
+      "uncertain_attempts": 0,
+      "latency_ms": 10211
+    }
+  },
+  "meta_connections_configured": false,
+  "live_delivery_enabled": false,
+  "notes": "Reserved example.com QA accounts only; no existing records deleted or real customers contacted."
+}

@@ -764,3 +764,29 @@ def test_meta_transport_errors_never_expose_secrets(status,body):
             with pytest.raises(__import__('fastapi').HTTPException) as error:await social.graph(client,'GET','https://graph.facebook.com/test',params={'access_token':'test-private-token'})
             assert error.value.status_code==502 and 'test-private-token' not in error.value.detail
     asyncio.run(run())
+
+
+@pytest.mark.parametrize('sender,timestamp',[('',None),('friend','nan'),('friend','1e30')])
+def test_malformed_tenant_webhooks_do_not_enqueue(client,monkeypatch,sender,timestamp):
+    import time
+    social=social_config(monkeypatch);a,aid=social_user(client);attach(social,aid,'222333')
+    payload={'object':'instagram','entry':[{'id':'222333','messaging':[{'timestamp':time.time()*1000 if timestamp is None else timestamp,'sender':{'id':sender},'message':{'mid':'malformed','text':'hello'}}]}]}
+    body=json.dumps(payload).encode();sig='sha256='+hmac.new(settings.instagram_client_secret.encode(),body,hashlib.sha256).hexdigest()
+    assert client.post('/webhook/meta',content=body,headers={'x-hub-signature-256':sig}).json()['accepted']==0
+    assert store.query('SELECT * FROM webhook_jobs')==[]
+
+
+@pytest.mark.parametrize('code,status',[(429,'rate_limited'),(503,'unavailable')])
+def test_autonomous_provider_failures_update_health_safely(client,monkeypatch,code,status):
+    social=social_config(monkeypatch);a,aid=social_user(client);row=attach(social,aid,'999888')
+    context=store.owner.set(aid)
+    try:update({'enabled':True,'reply_delay_seconds':0,'cooldown_seconds':0})
+    finally:store.owner.reset(context)
+    class ProviderFailure(Exception):pass
+    error=ProviderFailure('test-private-provider-secret');error.code=code
+    def fail(*args):raise error
+    monkeypatch.setattr(main,'generate_with_meaning',fail)
+    with pytest.raises(ProviderFailure):asyncio.run(process_job({'platform':'instagram','sender_id':'friend','sender_name':'','message_id':'provider-failure','text':'hello','owner_id':aid,'connection_id':row['id']}))
+    health=client.get('/api/platforms/status',headers=a).json()['provider_health']
+    assert health['status']==status and health['request_id']=='provider-failure'
+    assert 'test-private-provider-secret' not in json.dumps(health)+client.get('/api/activity',headers=a).text

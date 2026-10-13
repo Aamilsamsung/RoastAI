@@ -69,6 +69,8 @@ export default function Home() {
   const [initializing,setInitializing] = useState(true)
   const [thread,setThread] = useState('Latest messages')
   const [selectedThread,setSelectedThread] = useState({platform:'local',sender_id:'roast-me'})
+  const currentThread=useRef(selectedThread)
+  currentThread.current=selectedThread
   const [hasOlder,setHasOlder] = useState(false)
   const [resultMeta,setResultMeta] = useState<any>(null)
   const request = async(path:string, options:RequestInit={}, timeoutMs=45000) => {
@@ -97,12 +99,12 @@ export default function Home() {
     try {
       const [s,h,a,c,m] = await Promise.all([
         request('/api/settings',{},initial?90000:45000),request('/api/platforms/status',{},initial?90000:45000),request('/api/activity',{},initial?90000:45000),
-        request('/api/conversations',{},initial?90000:45000),initial?request('/api/messages?platform='+selectedThread.platform+'&sender_id='+encodeURIComponent(selectedThread.sender_id),{},90000):Promise.resolve([])
+        request('/api/conversations',{},initial?90000:45000),initial||tab==='conversations'?request('/api/messages?platform='+selectedThread.platform+'&sender_id='+encodeURIComponent(selectedThread.sender_id),{},initial?90000:45000):Promise.resolve([])
       ])
       if(initial) {setSettings(s);savedStudioSettings.current=studioFingerprint(s);setNotice('')}
       else setSettings((old:any)=>({...old,enabled:s.enabled,emergency_stop:s.emergency_stop}))
       setHealth(h); setActivities(a); setConvos(c)
-      if(initial) {setMessages(m);setHasOlder(m.length===100)}
+      if((initial||tab==='conversations')&&currentThread.current.platform===selectedThread.platform&&currentThread.current.sender_id===selectedThread.sender_id) {setMessages(m);setHasOlder(m.length===100)}
       setAuthorized(true); setConnected(true)
     } catch(e:any) { if(!e.sessionChanged){setConnected(false);setError(e.message)} }
     finally { if(token===currentToken.current)setInitializing(false) }
@@ -132,9 +134,9 @@ export default function Home() {
   },[notice,authorized])
   useEffect(()=>{
     if(!authorized) return
-    const interval=setInterval(()=>{if(!busy && !loading) refresh()},15000)
+    const interval=setInterval(()=>{if(!busy && !loading && document.visibilityState==='visible') refresh()},15000)
     return ()=>clearInterval(interval)
-  },[authorized,token,busy,loading])
+  },[authorized,token,busy,loading,tab,selectedThread.platform,selectedThread.sender_id])
   useEffect(()=>{
     const handler=(e:KeyboardEvent)=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();newConversation()}}
     window.addEventListener('keydown',handler)

@@ -20,6 +20,7 @@
     "malformed response retry keeps original request ID",
     "two separate conversations created",
     "conversation reopened with messages",
+    "open conversation updates after backend messages change",
     "session persists after refresh",
     "generation error remains visible after toast timeout",
     "mobile menu 320",

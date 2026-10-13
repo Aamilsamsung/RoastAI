@@ -1,4 +1,4 @@
-import asyncio, json, time, hmac, hashlib, logging, secrets
+import asyncio, json, time, hmac, hashlib, logging, secrets, math
 from contextlib import asynccontextmanager
 from types import SimpleNamespace
 from collections import defaultdict, deque
@@ -39,6 +39,20 @@ async def process_job(event):
     finally:
         store.owner.reset(context)
 
+def generate_social_reply(event,cfg,history):
+    provider_trace.set(None);started=time.perf_counter();model=settings.gemini_model if settings.ai_provider=='gemini' else settings.ollama_model
+    try:
+        result=generate_with_meaning(event['text'],SimpleNamespace(**cfg),event['sender_name'],history,cfg['input_language'],cfg['reply_language'],cfg['script_mode'])
+    except Exception as error:
+        code=getattr(error,'code',None)
+        status='rate_limited' if code==429 else 'setup_error' if code in (400,401,403,404) else 'unavailable'
+        store.record_provider({'status':status,'model':model,'checked_at':time.time(),'request_id':event['message_id'],'http_status':code if isinstance(code,int) else None,'error_type':type(error).__name__})
+        store.log('ERROR',provider_error_detail(error)+' · request '+event['message_id'])
+        raise
+    trace=provider_trace.get() or {}
+    store.record_provider({'status':'healthy','model':trace.get('model',model),'checked_at':time.time(),'request_id':event['message_id'],'latency_ms':round((time.perf_counter()-started)*1000)})
+    return result
+
 async def process_owned_job(event):
     platform=event['platform']; sender=event['sender_id']; cfg=current()
     connection_id=event.get('connection_id')
@@ -61,7 +75,7 @@ async def process_owned_job(event):
     if len(bucket)>=settings.rate_limit_per_minute:
         store.log('DELIVERY','Workspace generation limit reached; incoming message retained');return
     bucket.append(now)
-    reply,meaning=await run_in_threadpool(generate_with_meaning,event['text'],SimpleNamespace(**cfg),event['sender_name'],history,cfg['input_language'],cfg['reply_language'],cfg['script_mode'])
+    reply,meaning=await run_in_threadpool(generate_social_reply,event,cfg,history)
     live=current()
     if connection_id and not social.connection(connection_id):
         store.log('DELIVERY','Reply cancelled: connection was replaced or removed');return
@@ -312,8 +326,10 @@ async def webhook(request:Request):
                 timestamp=event.pop('event_timestamp',None)
                 try:timestamp=float(timestamp)
                 except (TypeError,ValueError):continue
-                if timestamp<=0:continue
-                event.update(owner_id=row['owner_id'],connection_id=row['id'],received_at=min(timestamp if event['platform']=='whatsapp' else timestamp/1000,time.time()))
+                received=timestamp if event['platform']=='whatsapp' else timestamp/1000
+                if not math.isfinite(received) or received<=0 or received>time.time()+300:continue
+                if not isinstance(event['sender_id'],str) or not event['sender_id'] or len(event['sender_id'])>128:continue
+                event.update(owner_id=row['owner_id'],connection_id=row['id'],received_at=min(received,time.time()))
                 if event['message_id']:event['message_id']=hashlib.sha256((row['platform']+':'+row['account_id']+':'+event['message_id']).encode()).hexdigest()
                 if isinstance(event['sender_id'],str):
                     event['recipient_id']=event['sender_id']
