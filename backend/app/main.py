@@ -160,7 +160,7 @@ async def protect(request: Request, call_next):
         bucket.append(now)
         token=request.headers.get('authorization','').removeprefix('Bearer ')
         public=request.url.path in ('/api/auth/signup','/api/auth/login','/api/auth/config','/api/auth/google','/api/auth/google/challenge')
-        admin=not settings.admin_token or hmac.compare_digest(token.encode(),settings.admin_token.encode())
+        admin=bool(settings.admin_token) and hmac.compare_digest(token.encode(),settings.admin_token.encode())
         user=None if admin or public else await run_in_threadpool(accounts.authenticate,token)
         if not public and not admin and user is None:
             return JSONResponse({'detail':'Sign in required','request_id':request.state.request_id},status_code=401)
@@ -220,6 +220,15 @@ def health():
     return {'status':'ok'}
 @app.get('/api/settings')
 def get_settings(): return current()
+@app.get('/api/billing/usage')
+def billing_usage():
+    from .billing import summary
+    return summary()
+@app.get('/api/admin/billing')
+def billing_overview():
+    if store.owner.get()!=0: raise HTTPException(403,'Owner access required')
+    return {'payments_enabled':False,'subscriptions':store.query('SELECT owner_id,plan,status,paid_until FROM subscriptions ORDER BY owner_id LIMIT 100'),
+        'usage':store.query('SELECT * FROM monthly_usage ORDER BY month DESC,owner_id LIMIT 100')}
 @app.put('/api/settings')
 def save_settings(x: BotSettings):
     changes=x.model_dump()
