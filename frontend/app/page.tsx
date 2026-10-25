@@ -266,7 +266,7 @@ export default function Home() {
         <div className="miniLogo"><Logo/></div><div><strong>{settings.enabled?'Your bot enabled':'Your bot paused'}</strong><small>{settings.dry_run||!health.delivery_approved?'Dry-run enforced':'Delivery approved'}</small></div>
         <button aria-label="Toggle bot" aria-pressed={settings.enabled} onClick={toggle} disabled={busy||loading} title="Toggle your social bot; manual Studio replies are always available" className={settings.enabled?'tinySwitch on':'tinySwitch'}><i/></button>
       </div>
-      <button className="emergency" disabled={busy} title="Stop your social bot and Studio generation" onClick={emergency}>Emergency stop</button>
+      <button className="emergency" title="Stop your social bot and Studio generation" onClick={emergency}>Emergency stop</button>
       <button className="ghost" onClick={()=>{request('/api/auth/logout',{method:'POST'}).catch(()=>{});try{sessionStorage.removeItem('roastai-session');sessionStorage.removeItem('roastai-pending-request');pendingGeneration.current=null}catch{};setToken('');currentToken.current='';generationLock.current=false;setBusy(false);setLoading(false);setAuthorized(false);setMsg('');setError('');setResultMeta(null);setHealth({});setSelectedThread({platform:'local',sender_id:'roast-me'});setReply('');setMeaning('');setMessages([]);setConvos([]);setActivities([]);setNotice('Signed out')}}>Sign out</button><div className="privacy">Secure workspace • Keys stay server-side</div>
     </aside>
     <div className="mobileWorkspaceBar"><button className="secondary" aria-label="Open navigation" aria-haspopup="dialog" aria-expanded={menuOpen} aria-controls="mobile-navigation" onClick={()=>setMenuOpen(true)}>☰ <span>Menu</span></button><div className="mobileBrand"><Logo/><b>RoastAI</b></div></div>
@@ -280,7 +280,7 @@ export default function Home() {
         <div className="miniLogo"><Logo/></div><div><strong>{settings.enabled?'Your bot enabled':'Your bot paused'}</strong><small>{settings.dry_run||!health.delivery_approved?'Dry-run enforced':'Delivery approved'}</small></div>
         <button aria-label="Toggle bot" aria-pressed={settings.enabled} onClick={toggle} disabled={busy||loading} title="Toggle your social bot; manual Studio replies are always available" className={settings.enabled?'tinySwitch on':'tinySwitch'}><i/></button>
       </div>
-      <button className="emergency" disabled={busy} title="Stop your social bot and Studio generation" onClick={emergency}>Emergency stop</button>
+      <button className="emergency" title="Stop your social bot and Studio generation" onClick={emergency}>Emergency stop</button>
       <button className="ghost" onClick={()=>{request('/api/auth/logout',{method:'POST'}).catch(()=>{});try{sessionStorage.removeItem('roastai-session');sessionStorage.removeItem('roastai-pending-request');pendingGeneration.current=null}catch{};setToken('');currentToken.current='';generationLock.current=false;setBusy(false);setLoading(false);setAuthorized(false);setMsg('');setError('');setResultMeta(null);setHealth({});setSelectedThread({platform:'local',sender_id:'roast-me'});setReply('');setMeaning('');setMessages([]);setConvos([]);setActivities([]);setNotice('Signed out')}}>Sign out</button><div className="privacy">Secure workspace • Keys stay server-side</div>
       </aside>
     </dialog>
