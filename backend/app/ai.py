@@ -143,7 +143,12 @@ def ask(prompt):
     return _gemini(prompt)
 
 def _parse_pair(raw):
-    if raw.strip().startswith('{'):
+    raw = raw.strip()
+    if raw.startswith('```'):
+        lines = raw.splitlines()
+        if len(lines) >= 3 and lines[-1].strip() == '```':
+            raw = '\n'.join(lines[1:-1]).strip()
+    if raw.startswith('{'):
         try:
             data=json.loads(raw);reply=data['reply'];meaning=data['english_meaning']
             if isinstance(reply,str) and isinstance(meaning,str) and reply.strip() and meaning.strip(): return reply.strip(),meaning.strip()
@@ -151,9 +156,9 @@ def _parse_pair(raw):
     reply = ""
     meaning = ""
     for line in raw.splitlines():
-        if line.upper().startswith("REPLY:"):
+        if line.strip().upper().startswith("REPLY:"):
             reply = line.split(":", 1)[1].strip()
-        elif line.upper().startswith("MEANING:"):
+        elif line.strip().upper().startswith("MEANING:"):
             meaning = line.split(":", 1)[1].strip()
     if not reply:
         raise ProviderResponseError("Gemini returned an unexpected reply format. Please retry.")
