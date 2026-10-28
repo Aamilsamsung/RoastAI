@@ -173,7 +173,7 @@ def test_adopts_original_v2_database_without_data_loss(tmp_path):
         assert connection.execute('SELECT text FROM messages').fetchone()[0]=='Original data'
         assert connection.execute('SELECT message FROM activity').fetchone()[0]=='Original log'
         assert connection.execute('SELECT message_id FROM processed_messages').fetchone()[0]=='old-mid'
-        assert connection.execute('SELECT version_num FROM alembic_version').fetchone()[0]=='0005'
+        assert connection.execute('SELECT version_num FROM alembic_version').fetchone()[0]=='0006'
 
 def test_message_cursor_pagination_and_validation(client):
     for i in range(125): store.add_message('local','pages','Owner','','incoming',str(i))
@@ -788,5 +788,88 @@ def test_autonomous_provider_failures_update_health_safely(client,monkeypatch,co
     monkeypatch.setattr(main,'generate_with_meaning',fail)
     with pytest.raises(ProviderFailure):asyncio.run(process_job({'platform':'instagram','sender_id':'friend','sender_name':'','message_id':'provider-failure','text':'hello','owner_id':aid,'connection_id':row['id']}))
     health=client.get('/api/platforms/status',headers=a).json()['provider_health']
-    assert health['status']==status and health['request_id']=='provider-failure'
+    assert health['status']==status and 'request_id' not in health
     assert 'test-private-provider-secret' not in json.dumps(health)+client.get('/api/activity',headers=a).text
+
+
+def test_missing_admin_token_never_grants_owner_access(client, monkeypatch):
+    monkeypatch.setattr(settings, 'admin_token', '')
+    assert client.get('/api/settings').status_code == 401
+    assert client.post('/api/bot/start').status_code == 401
+    assert client.get('/api/admin/billing').status_code == 401
+
+
+def test_shared_provider_status_does_not_leak_other_users_request(client):
+    import time
+    store.record_provider({'status':'healthy','model':settings.gemini_model,
+        'checked_at':time.time(),'request_id':'another-user-message-id',
+        'http_status':200,'error_type':'private-internal-type'})
+    response=client.get('/api/platforms/status',headers=AUTH).json()['provider_health']
+    assert response['status']=='healthy'
+    assert not {'request_id','http_status','error_type'} & response.keys()
+
+
+@pytest.fixture
+def billing_user(client, monkeypatch):
+    from app import billing
+    for table in ('subscriptions','monthly_usage','usage_reservations'):
+        store.execute('DELETE FROM '+table)
+    monkeypatch.setattr(settings,'manual_generation_limits_enabled',True)
+    headers,owner_id=social_user(client)
+    monkeypatch.setattr(main,'generate_with_meaning',lambda *args: ('test reply','test meaning'))
+    monkeypatch.setattr(settings,'rate_limit_per_minute',1000)
+    return headers,owner_id,billing
+
+
+def test_monthly_limit_replay_failure_release_and_isolation(client,billing_user,monkeypatch):
+    import uuid
+    headers,owner_id,billing=billing_user
+    rid=str(uuid.uuid4());payload={'message':'hello','request_id':rid}
+    assert client.post('/api/roast',headers=headers,json=payload).status_code==200
+    assert client.post('/api/roast',headers=headers,json=payload).status_code==200
+    assert client.get('/api/billing/usage',headers=headers).json()['usage']['generations']==1
+    def failed(*args): raise RuntimeError('provider failure')
+    monkeypatch.setattr(main,'generate_with_meaning',failed)
+    assert client.post('/api/roast',headers=headers,json={'message':'fail'}).status_code==502
+    assert client.get('/api/billing/usage',headers=headers).json()['usage']['generations']==1
+    store.execute('UPDATE monthly_usage SET generations=30 WHERE owner_id=:o',o=owner_id)
+    assert client.post('/api/roast',headers=headers,json={'message':'over allowance'}).status_code==429
+    assert client.post('/api/roast',headers=headers,json=payload).status_code==200
+    other,_=social_user(client)
+    assert client.get('/api/billing/usage',headers=other).json()['usage']['generations']==0
+    assert client.get('/api/admin/billing',headers=headers).status_code==403
+    assert client.get('/api/admin/billing',headers=AUTH).status_code==200
+
+
+def test_subscription_expiry_cancellation_and_month_rollover(client,billing_user,monkeypatch):
+    import time
+    headers,owner_id,billing=billing_user
+    store.execute("INSERT INTO subscriptions VALUES(:o,'pro','active',:t)",o=owner_id,t=time.time()+3600)
+    assert client.get('/api/billing/usage',headers=headers).json()['plan']=='pro'
+    store.execute("UPDATE subscriptions SET status='cancelled' WHERE owner_id=:o",o=owner_id)
+    assert client.get('/api/billing/usage',headers=headers).json()['plan']=='pro'
+    store.execute('UPDATE subscriptions SET paid_until=0 WHERE owner_id=:o',o=owner_id)
+    assert client.get('/api/billing/usage',headers=headers).json()['plan']=='free'
+    store.execute("UPDATE subscriptions SET status='past_due',paid_until=:t WHERE owner_id=:o",o=owner_id,t=time.time()+3600)
+    assert client.get('/api/billing/usage',headers=headers).json()['plan']=='free'
+    assert client.post('/api/roast',headers=headers,json={'message':'this month'}).status_code==200
+    monkeypatch.setattr(billing,'month_key',lambda:'2099-01')
+    assert client.get('/api/billing/usage',headers=headers).json()['usage']['generations']==0
+    assert client.post('/api/roast',headers=headers,json={'message':'next month'}).status_code==200
+    assert len(store.query('SELECT * FROM monthly_usage WHERE owner_id=:o',o=owner_id))==2
+
+
+def test_concurrent_monthly_reservations_are_bounded(client,billing_user):
+    from concurrent.futures import ThreadPoolExecutor
+    headers,owner_id,billing=billing_user
+    store.execute('INSERT INTO monthly_usage(owner_id,month,generations) VALUES(:o,:m,29)',o=owner_id,m=billing.month_key())
+    def claim(index):
+        context=store.owner.set(owner_id)
+        try:
+            try: store.claim_request('concurrent-'+str(index),'input');return 200
+            except main.HTTPException as error:return error.status_code
+        finally:store.owner.reset(context)
+    with ThreadPoolExecutor(max_workers=5) as pool: results=list(pool.map(claim,range(5)))
+    assert results.count(200)==1 and results.count(429)==4
+    assert store.query('SELECT generations FROM monthly_usage WHERE owner_id=:o',o=owner_id)[0]['generations']==30
+    assert len(store.query('SELECT * FROM generation_requests WHERE owner_id=:o',o=owner_id))==1

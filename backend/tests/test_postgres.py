@@ -70,7 +70,7 @@ with TestClient(app) as client:
     assert client.get('/health').status_code==200
     assert client.get('/api/settings',headers={'Authorization':'Bearer '+os.environ['ADMIN_TOKEN']}).json()['custom_instructions']=='Persistent voice'
 # Additive reliability migration and atomic scoped replay survive PostgreSQL restart.
-assert store.query('SELECT version_num FROM alembic_version')[0]['version_num']=='0005'
+assert store.query('SELECT version_num FROM alembic_version')[0]['version_num']=='0006'
 assert store.claim_request('pg-request','fingerprint') is None
 assert store.claim_request('pg-request','fingerprint')['status']=='processing'
 store.finish_request('pg-request',{'reply':'safe'},'incoming safe','safe','pg-thread')
@@ -104,6 +104,18 @@ assert len(social.listing()['connections'])==1
 store.execute('INSERT INTO social_oauth_states VALUES(:d,:o,:p,:t)',d=hashlib.sha256(b'pg-state').hexdigest(),o=7,p='instagram',t=time.time()+300)
 assert social.consume('pg-state')==7
 store.owner.set(0)
+settings.manual_generation_limits_enabled=True
+from app import billing
+store.execute('INSERT INTO monthly_usage(owner_id,month,generations) VALUES(81,:m,29)',m=billing.month_key())
+def reserve_last(index):
+    context=store.owner.set(81)
+    try:
+        try:store.claim_request('quota-'+str(index),'quota-input');return 200
+        except __import__('fastapi').HTTPException as error:return error.status_code
+    finally:store.owner.reset(context)
+with ThreadPoolExecutor(max_workers=5) as pool:results=list(pool.map(reserve_last,range(5)))
+assert results.count(200)==1 and results.count(429)==4
+assert store.query('SELECT generations FROM monthly_usage WHERE owner_id=81')[0]['generations']==30
 print('PostgreSQL migration, import sequences, persistence, concurrent locks, deduplication and restart checks passed')
 '''
             env={**os.environ,'DATABASE_URL':test_url,'ENVIRONMENT':'test','ADMIN_TOKEN':'test-postgres-workspace-token-32-characters',

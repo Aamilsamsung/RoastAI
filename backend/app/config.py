@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     ai_attempt_timeout_seconds: int = Field(12,ge=1,le=30)
     ai_max_attempts: int = Field(2,ge=1,le=3)
     social_delivery_approved: bool = False
+    manual_generation_limits_enabled: bool = False
     rate_limit_per_minute: int = Field(20,ge=1,le=1000)
     gemini_api_key: str = ""
     gemini_model: str = "gemini-3.5-flash-lite"

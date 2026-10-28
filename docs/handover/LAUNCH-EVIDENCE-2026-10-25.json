@@ -1,0 +1,58 @@
+{
+  "date": "2026-10-25",
+  "code_commit": "e223ccdd87c56999c23d09ae20ba9c82ebd2b5e0",
+  "local_backend": {
+    "passed": 128,
+    "skipped": 1,
+    "skip_reason": "TEST_POSTGRES_URL absent"
+  },
+  "frontend": {
+    "next": "16.4.3",
+    "build": "passed",
+    "typecheck": "passed",
+    "npm_production_audit_vulnerabilities": 0
+  },
+  "python_full_requirements_audit": {
+    "packages_scanned": 44,
+    "known_vulnerabilities": 0
+  },
+  "live_baseline_smoke": {
+    "production_commit": "27aa0da92e257799dfc79af15ff839295f272117",
+    "health": 200,
+    "anonymous_settings": 401,
+    "qa_signups": 2,
+    "login_successes": 2,
+    "real_gemini": {
+      "status": 200,
+      "seconds": 2.49,
+      "model": "gemini-3.5-flash-lite",
+      "attempts": 1,
+      "input_tokens": 297,
+      "output_tokens": 45,
+      "thinking_tokens": null,
+      "total_tokens": 342
+    },
+    "own_thread_messages": 2,
+    "other_user_thread_messages": 0,
+    "logout": 200,
+    "revoked_session": 401
+  },
+  "production_changed": false,
+  "payments_enabled": false,
+  "live_social_sends": 0,
+  "ci_run": "https://github.com/Aamilsamsung/RoastAI/actions/runs/40221129512",
+  "google_client_id_configured_live": true,
+  "ci": {
+    "e223ccdd": {
+      "all_four_jobs": "success",
+      "browser_checks": 65
+    },
+    "6ea1df58": {
+      "backend": "success",
+      "frontend": "success",
+      "postgres": "success",
+      "browser": "in_progress",
+      "run": "https://github.com/Aamilsamsung/RoastAI/actions/runs/40221316683"
+    }
+  }
+}
