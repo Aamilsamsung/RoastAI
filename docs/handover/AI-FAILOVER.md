@@ -34,7 +34,7 @@ The API's `usage` identifies the answering provider/model, fallback use, all pro
 
 For immediate Gemini-only behavior, set **AI_PROVIDER=gemini** and **AI_FALLBACK_ENABLED=false** on the backend, then save/deploy. Tests verify the backup is not called in this mode. Groq credentials can remain privately configured or be removed.
 
-The source baseline immediately before this integration is commit **ec67d996aecda422f49c389cdf71fb48ca484750**. The integration is isolated in one commit so it can be reverted if requested. Set AI_PROVIDER back to gemini before restoring the old source, because that version does not accept `groq` as a primary provider. This release changes no database schema and does not delete or rewrite conversations, settings, accounts or activity.
+The source baseline immediately before this integration is commit **ec67d996aecda422f49c389cdf71fb48ca484750**. The integration is isolated in commit **4b006fee9d268f59376b9aae9a4ecd0a63bf72f9**, so it can be reverted if requested. The separate Next.js security patch should remain when reverting AI behavior. Set AI_PROVIDER back to gemini before restoring the old source, because that version does not accept `groq` as a primary provider. This release changes no database schema and does not delete or rewrite conversations, settings, accounts or activity.
 
 ## Verification scope
 
@@ -52,4 +52,4 @@ Before this integration was deployed, the backend was already unable to start be
 
 Restore access to the intended PostgreSQL database (and restore prior data from an available backup where necessary), then set the correct DATABASE_URL privately on the backend service and redeploy. No database was replaced, recreated, deleted or migrated by this feature. Real Groq inference also requires GROQ_API_KEY. No secret values have been requested in chat or copied into source.
 
-Local validation: 151 backend tests passed; one PostgreSQL integration test skipped locally pending the isolated PostgreSQL CI job. Python compileall and the production frontend build passed. New provider failures use test doubles and HTTP mock transports; this is not a claim of live Groq verification.
+Local validation: 151 backend tests passed; one PostgreSQL integration test skipped locally. The backend and real isolated PostgreSQL jobs passed in GitHub run 44329477001; its frontend audit identified an existing critical Next.js advisory, addressed by a separate update to Next.js 16.4.6. Production build/typecheck and npm audit pass after the update (zero reported production dependency vulnerabilities). Python compileall and the production frontend build passed. New provider failures use test doubles and HTTP mock transports; this is not a claim of live Groq verification.
