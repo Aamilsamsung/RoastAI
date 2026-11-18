@@ -66,3 +66,5 @@ html,body{background:#f6f3ed;color:#211e1a}body{background:radial-gradient(ellip
 
 .socialPin{display:block;font-size:12px;color:#66584b;margin:12px 0}.socialPin input{display:block;width:150px;max-width:100%;min-height:44px;border:1px solid #dcd0c3;border-radius:9px;padding:10px;color:#28211c;background:#fffdf9;margin-top:8px}.socialPin+small{display:block;font-size:11px;line-height:1.7;margin-bottom:14px;color:#786b5e}
 .newRoast:disabled{opacity:.55;cursor:wait}
+/* Provider labels can include the answering backup on narrow screens. */
+.topRight{flex-wrap:wrap}

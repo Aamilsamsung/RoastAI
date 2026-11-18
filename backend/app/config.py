@@ -28,9 +28,12 @@ class Settings(BaseSettings):
     ai_max_attempts: int = Field(2,ge=1,le=3)
     social_delivery_approved: bool = False
     rate_limit_per_minute: int = Field(20,ge=1,le=1000)
+    groq_api_key: str = ""
+    groq_model: str = "openai/gpt-oss-20b"
+    ai_fallback_enabled: bool = True
     gemini_api_key: str = ""
     gemini_model: str = "gemini-3.5-flash-lite"
-    ai_provider: Literal["gemini", "ollama"] = "gemini"
+    ai_provider: Literal["gemini", "groq", "ollama"] = "gemini"
     ollama_base_url: str = "http://127.0.0.1:11434"
     ollama_model: str = "gemma4:4b"
     bot_enabled: bool = False

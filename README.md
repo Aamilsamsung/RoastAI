@@ -280,3 +280,7 @@ See `docs/handover/ARCHITECTURE.md`, `OPERATIONS.md`, `COSTS.md`, and `DEPENDENC
 ## User-owned autonomous social replies
 
 Each signed-in user now controls their own bot and emergency stop. Official Instagram OAuth, Facebook Page selection and WhatsApp Business Embedded Signup connect accounts to that user's workspace, with encrypted server-side tokens and isolated webhook routing. The owner workspace's existing integrations and history are preserved. See [social connection setup](docs/handover/SOCIAL-CONNECTIONS.md) for credentials, permissions, callback URLs, support boundaries and controlled tests. Live delivery remains blocked by SOCIAL_DELIVERY_APPROVED=false.
+
+## Gemini + Groq failover
+
+Gemini remains primary. Add a server-side GROQ_API_KEY to the backend Render service to activate the configured Groq backup. AI_FALLBACK_ENABLED=true switches on eligible provider failures; AI_PROVIDER=groq reverses the priority. AI_FALLBACK_ENABLED=false with AI_PROVIDER=gemini restores Gemini-only behavior. Both reply and English meaning are generated together by the provider that succeeds. See [failover setup, validation and rollback](docs/handover/AI-FAILOVER.md). No database migration is required.

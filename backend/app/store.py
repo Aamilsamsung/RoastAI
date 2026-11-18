@@ -89,14 +89,19 @@ def update_preferences(default, changes, protect_stop=False):
 
 
 def record_provider(data):
+    from .ai import provider_model
+    data={**data,'route_signature':[settings.ai_provider,settings.ai_fallback_enabled,provider_model('gemini'),provider_model('groq')]}
     execute('INSERT INTO provider_state(provider,data) VALUES(:p,:d) ON CONFLICT(provider) DO UPDATE SET data=excluded.data',p=settings.ai_provider,d=json.dumps(data))
 
 def provider_status():
     import time
     rows=query('SELECT data FROM provider_state WHERE provider=:p',p=settings.ai_provider)
     value=json.loads(rows[0]['data']) if rows else {'status':'not_tested'}
-    model=settings.gemini_model if settings.ai_provider=='gemini' else settings.ollama_model
-    if value.get('model')!=model or time.time()-value.get('checked_at',0)>600: return {'status':'not_tested','model':model}
+    from .ai import provider_model
+    active=value.get('provider',settings.ai_provider)
+    model=provider_model(active) if active in ('gemini','groq','ollama') else provider_model(settings.ai_provider)
+    signature=[settings.ai_provider,settings.ai_fallback_enabled,provider_model('gemini'),provider_model('groq')]
+    if value.get('model')!=model or time.time()-value.get('checked_at',0)>600 or (value.get('route_signature') is not None and value['route_signature']!=signature): return {'status':'not_tested','provider':settings.ai_provider,'model':provider_model(settings.ai_provider)}
     return value
 
 def claim_request(request_id,fingerprint):

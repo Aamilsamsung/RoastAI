@@ -33,6 +33,12 @@ services:
         value: gemini-3.5-flash-lite
       - key: AI_PROVIDER
         value: gemini
+      - key: AI_FALLBACK_ENABLED
+        value: "true"
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        value: openai/gpt-oss-20b
       - key: AI_TIMEOUT_SECONDS
         value: "30"
       - key: AI_ATTEMPT_TIMEOUT_SECONDS

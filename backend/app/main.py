@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.concurrency import run_in_threadpool
 from .config import settings
 from .models import BotSettings, RoastRequest, PageSelection, WhatsAppSignup
-from .ai import generate_with_meaning, provider_error_detail, provider_trace
+from .ai import generate_with_meaning, provider_error_detail, provider_trace, provider_model, configured_providers
 from .meta import verify_signature, parse_events, whatsapp_send, instagram_send, facebook_send
 from . import store
 from . import accounts, snapchat, social
@@ -40,17 +40,17 @@ async def process_job(event):
         store.owner.reset(context)
 
 def generate_social_reply(event,cfg,history):
-    provider_trace.set(None);started=time.perf_counter();model=settings.gemini_model if settings.ai_provider=='gemini' else settings.ollama_model
+    provider_trace.set(None);started=time.perf_counter();model=provider_model(settings.ai_provider)
     try:
         result=generate_with_meaning(event['text'],SimpleNamespace(**cfg),event['sender_name'],history,cfg['input_language'],cfg['reply_language'],cfg['script_mode'])
     except Exception as error:
-        code=getattr(error,'code',None)
+        trace=provider_trace.get() or {};code=getattr(error,'code',None)
         status='rate_limited' if code==429 else 'setup_error' if code in (400,401,403,404) else 'unavailable'
-        store.record_provider({'status':status,'model':model,'checked_at':time.time(),'request_id':event['message_id'],'http_status':code if isinstance(code,int) else None,'error_type':type(error).__name__})
+        store.record_provider({'status':status,'provider':trace.get('provider',settings.ai_provider),'providers':trace.get('providers',[]),'fallback_used':trace.get('fallback_used',False),'model':trace.get('model',model),'checked_at':time.time(),'request_id':event['message_id'],'http_status':code if isinstance(code,int) else None,'error_type':type(error).__name__})
         store.log('ERROR',provider_error_detail(error)+' · request '+event['message_id'])
         raise
     trace=provider_trace.get() or {}
-    store.record_provider({'status':'healthy','model':trace.get('model',model),'checked_at':time.time(),'request_id':event['message_id'],'latency_ms':round((time.perf_counter()-started)*1000)})
+    store.record_provider({'status':'healthy','provider':trace.get('provider',settings.ai_provider),'providers':trace.get('providers',[]),'fallback_used':trace.get('fallback_used',False),'model':trace.get('model',model),'checked_at':time.time(),'request_id':event['message_id'],'latency_ms':round((time.perf_counter()-started)*1000)})
     return result
 
 async def process_owned_job(event):
@@ -252,14 +252,14 @@ def roast(x: RoastRequest,request:Request):
     except Exception as error:
         trace=provider_trace.get() or {};code=getattr(error,'code',None);detail=provider_error_detail(error)
         failure_status='rate_limited' if code==429 else 'setup_error' if code in (400,401,403,404) else 'unavailable'
-        evidence={'status':failure_status,'model':settings.gemini_model,'checked_at':time.time(),'request_id':rid,'http_status':code if isinstance(code,int) else None,'error_type':type(error).__name__}
+        evidence={'status':failure_status,'provider':trace.get('provider',settings.ai_provider),'providers':trace.get('providers',[]),'fallback_used':trace.get('fallback_used',False),'model':trace.get('model',provider_model(settings.ai_provider)),'checked_at':time.time(),'request_id':rid,'http_status':code if isinstance(code,int) else None,'error_type':type(error).__name__}
         store.record_provider(evidence)
         payload={'detail':detail,'request_id':rid,'provider_status':evidence['http_status'],'attempts':trace.get('attempts',0),'status_code':502}
         store.finish_request(rid,payload);store.log('ERROR',detail+' · request '+rid)
-        logging.getLogger('uvicorn.error').warning('AI failure request_id=%s provider=%s model=%s http_status=%s type=%s attempts=%s',rid,settings.ai_provider,settings.gemini_model,evidence['http_status'],type(error).__name__,trace.get('attempts',0))
+        logging.getLogger('uvicorn.error').warning('AI failure request_id=%s provider=%s model=%s http_status=%s type=%s attempts=%s',rid,trace.get('provider',settings.ai_provider),trace.get('model',provider_model(settings.ai_provider)),evidence['http_status'],type(error).__name__,trace.get('attempts',0))
         return JSONResponse(payload,status_code=502)
     trace=provider_trace.get() or {};ai_ms=round((time.perf_counter()-started)*1000)
-    store.record_provider({'status':'healthy','model':trace.get('model',settings.gemini_model),'checked_at':time.time(),'request_id':rid,'latency_ms':ai_ms})
+    store.record_provider({'status':'healthy','provider':trace.get('provider',settings.ai_provider),'providers':trace.get('providers',[]),'fallback_used':trace.get('fallback_used',False),'model':trace.get('model',provider_model(settings.ai_provider)),'checked_at':time.time(),'request_id':rid,'latency_ms':ai_ms})
     if current()['safety_epoch']!=cfg['safety_epoch']:
         payload={'detail':'Generation cancelled because bot settings changed.','request_id':rid,'status_code':409}
         store.finish_request(rid,payload);return JSONResponse(payload,status_code=409)
@@ -280,7 +280,8 @@ def clear():
     store.clear_history(); store.log('HISTORY','Conversation history cleared'); return {'ok':True}
 @app.get('/api/platforms/status')
 def platforms():
-    value= {'gemini':bool(settings.gemini_api_key and settings.gemini_model),'ollama':settings.ai_provider=='ollama' and bool(settings.ollama_base_url),
+    configured=configured_providers()
+    value= {'groq':configured['groq'],'ai_configured':configured.get(settings.ai_provider,False) or (settings.ai_provider!='ollama' and settings.ai_fallback_enabled and configured['groq' if settings.ai_provider=='gemini' else 'gemini']),'fallback_enabled':settings.ai_fallback_enabled and settings.ai_provider!='ollama','providers':{p:{'configured':configured[p],'model':provider_model(p)} for p in ('gemini','groq')},'gemini':bool(settings.gemini_api_key and settings.gemini_model),'ollama':settings.ai_provider=='ollama' and bool(settings.ollama_base_url),
         'whatsapp':bool(settings.whatsapp_access_token and settings.whatsapp_phone_number_id),'instagram':bool(settings.instagram_access_token and settings.instagram_account_id),
         'facebook':bool(settings.facebook_page_access_token and settings.facebook_page_id),'snapchat':bool(settings.snapchat_access_token and settings.snapchat_profile_id),'snapchat_capability':'creator_collaboration_approval_required',
         'environment':settings.environment,'database_backend':store.engine.dialect.name,'provider':settings.ai_provider,'provider_health':store.provider_status(),'delivery_approved':settings.social_delivery_approved,'status_kind':'configuration_only_not_connection_verified'}

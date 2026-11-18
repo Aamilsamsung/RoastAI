@@ -8,14 +8,45 @@ from .config import settings
 
 class ProviderConfigurationError(RuntimeError): pass
 class ProviderResponseError(RuntimeError): pass
+class ProviderSafetyError(RuntimeError): pass
+class GroqAPIError(RuntimeError):
+    def __init__(self,code):
+        self.code=code
+        super().__init__('Groq request failed')
+class AllProvidersUnavailable(RuntimeError):
+    def __init__(self,failures):
+        self.failures=failures
+        codes=[r.get('http_status') for r in failures]
+        self.code=429 if codes and all(c==429 for c in codes) else None
+        super().__init__('Configured AI providers could not complete the request')
+
+_call_deadline=ContextVar('ai_call_deadline',default=None)
+_pair_required=ContextVar('ai_pair_required',default=False)
+
+def provider_model(provider):
+    return {'gemini':settings.gemini_model,'groq':settings.groq_model,'ollama':settings.ollama_model}[provider]
+
+def configured_providers():
+    return {'gemini':bool(settings.gemini_api_key and settings.gemini_model),'groq':bool(settings.groq_api_key and settings.groq_model),'ollama':bool(settings.ollama_base_url and settings.ollama_model)}
+
+def _remaining_deadline():
+    return _call_deadline.get() or time.perf_counter()+settings.ai_timeout_seconds
+
+def _blocked(value):
+    value=str(getattr(value,'name',value)).upper().rsplit('.',1)[-1]
+    return value in {'SAFETY','BLOCKLIST','PROHIBITED_CONTENT','SPII','IMAGE_SAFETY','CONTENT_FILTER','RECITATION','MODEL_ARMOR'}
+
 
 def provider_error_detail(error):
+    if isinstance(error,ProviderSafetyError): return 'The AI provider declined this request. Please use a safe, non-abusive message.'
+    if isinstance(error,AllProvidersUnavailable): return 'Gemini and Groq could not complete this request. Check backend keys, model access and quotas, or retry shortly.'
+    if isinstance(error,GroqAPIError): return 'Groq is unavailable or its backend key, model access or quota needs attention. Please retry shortly.'
     if isinstance(error,ProviderConfigurationError):
-        return 'Gemini API key is missing. The owner must set GEMINI_API_KEY in backend Render Environment.'
+        return 'The selected AI provider needs a backend API key. Configure GEMINI_API_KEY or GROQ_API_KEY in Render Environment.'
     if isinstance(error,ProviderResponseError): return str(error)
     import httpx
-    if isinstance(error,(TimeoutError,httpx.TimeoutException)): return 'Gemini timed out. Please retry with a shorter message.'
-    if isinstance(error,httpx.NetworkError): return 'The backend could not reach Gemini. Please retry shortly.'
+    if isinstance(error,(TimeoutError,httpx.TimeoutException)): return 'The AI provider timed out. Please retry with a shorter message.'
+    if isinstance(error,httpx.NetworkError): return 'The backend could not reach the AI provider. Please retry shortly.'
     from google.genai.errors import APIError
     if isinstance(error,APIError):
         return {
@@ -86,7 +117,7 @@ def _gemini(prompt):
     import httpx
     from google.genai import types
     from google.genai.errors import APIError
-    started=time.perf_counter(); deadline=started+settings.ai_timeout_seconds
+    started=time.perf_counter(); deadline=min(started+settings.ai_timeout_seconds,_remaining_deadline())
     trace={'provider':'gemini','model':settings.gemini_model,'attempts':0,'input_tokens':None,'output_tokens':None,'thinking_tokens':None,'total_tokens':None}
     provider_trace.set(trace)
     thinking=(types.ThinkingConfig(thinking_budget=0) if settings.gemini_model.startswith('gemini-2.5')
@@ -100,6 +131,8 @@ def _gemini(prompt):
             options=types.HttpOptions(timeout=int(min(remaining,settings.ai_attempt_timeout_seconds)*1000),retry_options=types.HttpRetryOptions(attempts=1))
             with genai.Client(api_key=settings.gemini_api_key,http_options=options) as client:
                 response=client.models.generate_content(model=settings.gemini_model,contents=prompt,config=types.GenerateContentConfig(thinking_config=thinking,max_output_tokens=1536,temperature=0.8))
+            if _blocked(getattr(getattr(response,'prompt_feedback',None),'block_reason',None)) or any(_blocked(getattr(c,'finish_reason',None)) for c in (getattr(response,'candidates',None) or [])):
+                raise ProviderSafetyError('Provider safety block')
             trace.pop('http_status',None)
             trace['uncertain_attempts']=attempt
             usage=getattr(response,'usage_metadata',None)
@@ -136,11 +169,87 @@ def _ollama(prompt):
     with urllib.request.urlopen(req, timeout=60) as res:
         return json.loads(res.read().decode()).get("response", "").strip()
 
+def _groq(prompt):
+    import httpx
+    if not settings.groq_api_key: raise ProviderConfigurationError('Missing backend Groq key')
+    started=time.perf_counter();deadline=min(started+settings.ai_timeout_seconds,_remaining_deadline())
+    trace={'provider':'groq','model':settings.groq_model,'attempts':0,'input_tokens':None,'output_tokens':None,'thinking_tokens':None,'total_tokens':None}
+    provider_trace.set(trace)
+    payload={'model':settings.groq_model,'messages':[{'role':'user','content':prompt}],'temperature':0.8,'max_completion_tokens':1536,'stream':False}
+    if settings.groq_model.startswith('openai/gpt-oss-'):payload.update(reasoning_effort='low',include_reasoning=False)
+    for attempt in range(settings.ai_max_attempts):
+        remaining=deadline-time.perf_counter()
+        if remaining<=0:raise TimeoutError('AI request deadline exceeded')
+        trace['attempts']=attempt+1
+        try:
+            with httpx.Client(timeout=min(remaining,settings.ai_attempt_timeout_seconds),follow_redirects=False) as client:
+                response=client.post('https://api.groq.com/openai/v1/chat/completions',headers={'Authorization':'Bearer '+settings.groq_api_key},json=payload)
+            if response.status_code>=400:raise GroqAPIError(response.status_code)
+            try:
+                data=response.json();choice=data['choices'][0];message=choice['message']
+                if message.get('refusal') or _blocked(choice.get('finish_reason')):raise ProviderSafetyError('Provider safety block')
+                result=message.get('content')
+                if not isinstance(result,str) or not result.strip():raise ValueError()
+                usage=data.get('usage') or {}
+                if not isinstance(usage,dict):raise ValueError()
+            except (ValueError,KeyError,IndexError,TypeError,AttributeError):raise ProviderResponseError('Groq returned no usable reply. Please retry.') from None
+            for key,field in [('input_tokens','prompt_tokens'),('output_tokens','completion_tokens'),('total_tokens','total_tokens')]:trace[key]=usage.get(field)
+            detail=usage.get('completion_tokens_details') or {}
+            trace['thinking_tokens']=detail.get('reasoning_tokens') if isinstance(detail,dict) else None
+            trace.pop('http_status',None);trace['uncertain_attempts']=attempt;trace['latency_ms']=round((time.perf_counter()-started)*1000)
+            return result.strip()
+        except Exception as error:
+            code=getattr(error,'code',None);trace['http_status']=code if isinstance(code,int) else None;trace['latency_ms']=round((time.perf_counter()-started)*1000)
+            transient=(isinstance(error,GroqAPIError) and code in (408,500,502,503,504)) or isinstance(error,(httpx.ConnectError,httpx.TimeoutException))
+            if not transient or attempt+1>=settings.ai_max_attempts:raise
+            delay=min(.5*2**attempt+random.uniform(0,.2),max(0,deadline-time.perf_counter()))
+            if deadline-time.perf_counter()<=delay:raise
+            time.sleep(delay)
+
+
+def _can_fallback(error):
+    import httpx
+    from google.genai.errors import APIError
+    if isinstance(error,ProviderSafetyError):return False
+    if isinstance(error,(ProviderConfigurationError,ProviderResponseError,TimeoutError,httpx.NetworkError,httpx.TimeoutException)):return True
+    return isinstance(error,(APIError,GroqAPIError)) and getattr(error,'code',None) in (400,401,403,404,408,429,500,502,503,504)
+
+
 def ask(prompt):
     provider_trace.set(None)
-    if settings.ai_provider == "ollama":
-        return _ollama(prompt)
-    return _gemini(prompt)
+    if settings.ai_provider=='ollama':return _ollama(prompt)
+    primary=settings.ai_provider;secondary='groq' if primary=='gemini' else 'gemini'
+    chain=[primary]
+    if settings.ai_fallback_enabled and configured_providers()[secondary]:chain.append(secondary)
+    began=time.perf_counter();deadline=began+settings.ai_timeout_seconds;outcomes=[]
+    for index,provider in enumerate(chain):
+        if time.perf_counter()>=deadline:break
+        reserved=min(settings.ai_attempt_timeout_seconds,settings.ai_timeout_seconds/2) if index==0 and len(chain)>1 else 0
+        token=_call_deadline.set(deadline-reserved)
+        provider_trace.set({'provider':provider,'model':provider_model(provider),'attempts':0})
+        try:
+            raw={'gemini':_gemini,'groq':_groq}[provider](prompt)
+            if _pair_required.get():_parse_pair(raw)
+        except Exception as error:
+            trace=dict(provider_trace.get() or {})
+            trace.update(provider=provider,model=provider_model(provider),status='failed',error_type=type(error).__name__)
+            trace['http_status']=getattr(error,'code',None) if isinstance(getattr(error,'code',None),int) else None
+            outcomes.append(trace)
+            provider_trace.set({**trace,'primary_provider':primary,'fallback_used':index>0,'providers':outcomes,'attempts':sum(r.get('attempts',0) for r in outcomes)})
+            if not _can_fallback(error) or len(chain)==1:raise
+        else:
+            trace=dict(provider_trace.get() or {});trace['attempts']=max(1,trace.get('attempts',0))
+            outcomes.append({**trace,'status':'healthy'})
+            provider_trace.set({**trace,'primary_provider':primary,'fallback_used':index>0,'providers':outcomes,'attempts':sum(r.get('attempts',0) for r in outcomes),'latency_ms':round((time.perf_counter()-began)*1000)})
+            return raw
+        finally:_call_deadline.reset(token)
+    raise AllProvidersUnavailable(outcomes) from None
+
+
+def _ask_pair(prompt):
+    token=_pair_required.set(True)
+    try:return ask(prompt)
+    finally:_pair_required.reset(token)
 
 def _parse_pair(raw):
     raw = raw.strip()
@@ -161,20 +270,20 @@ def _parse_pair(raw):
         elif line.strip().upper().startswith("MEANING:"):
             meaning = line.split(":", 1)[1].strip()
     if not reply:
-        raise ProviderResponseError("Gemini returned an unexpected reply format. Please retry.")
+        raise ProviderResponseError("The AI provider returned an unexpected reply format. Please retry.")
     if not meaning:
-        raise ProviderResponseError("Gemini returned an incomplete reply without English meaning. Please retry.")
+        raise ProviderResponseError("The AI provider returned an incomplete reply without English meaning. Please retry.")
     return reply, meaning
 
 def generate(message, cfg, sender_name="Someone", context=None,
              input_language="auto", reply_language="same", script_mode="roman"):
-    raw = ask(_prompt(message, cfg, sender_name, context, input_language, reply_language, script_mode))
+    raw = _ask_pair(_prompt(message, cfg, sender_name, context, input_language, reply_language, script_mode))
     reply, _ = _parse_pair(raw)
     return reply[:cfg.max_reply_length].rstrip()
 
 def generate_with_meaning(message, cfg, sender_name="Someone", context=None,
                           input_language="auto", reply_language="same", script_mode="roman"):
-    raw = ask(_prompt(message, cfg, sender_name, context, input_language, reply_language, script_mode))
+    raw = _ask_pair(_prompt(message, cfg, sender_name, context, input_language, reply_language, script_mode))
     reply, meaning = _parse_pair(raw)
     return reply[:cfg.max_reply_length].rstrip(), meaning.strip()
 
