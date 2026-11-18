@@ -1,4 +1,4 @@
-import hashlib, hmac, secrets, time
+import hashlib, hmac, secrets, time, re
 from pydantic import BaseModel, Field, field_validator
 from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
@@ -59,6 +59,11 @@ class GoogleCredential(BaseModel):
     credential: str = Field(min_length=20,max_length=16384)
     nonce: str = Field(min_length=32,max_length=128)
 
+def google_configuration():
+    client=settings.google_client_id.strip()
+    valid=bool(re.fullmatch(r'[A-Za-z0-9_-]+\.apps\.googleusercontent\.com',client))
+    return {'google_client_id':client if valid else '', 'google_setup_error':None if valid else 'invalid_client_id' if client else 'missing_client_id'}
+
 def google_challenge():
     if not settings.google_client_id: raise HTTPException(503,'Google sign-in is not configured yet')
     nonce=secrets.token_urlsafe(32)
@@ -75,10 +80,10 @@ def verify_google(credential):
     def bounded_request(*args,**kwargs):
         kwargs['timeout']=10
         return transport(*args,**kwargs)
-    try: claims=id_token.verify_oauth2_token(credential,bounded_request,settings.google_client_id)
+    try: claims=id_token.verify_oauth2_token(credential,bounded_request,settings.google_client_id.strip())
     except ValueError: raise HTTPException(401,'Google sign-in could not be verified')
     except TransportError: raise HTTPException(503,'Google verification is temporarily unavailable')
-    if claims.get('iss') not in ('accounts.google.com','https://accounts.google.com') or claims.get('aud')!=settings.google_client_id or not claims.get('email_verified') or not claims.get('sub') or not claims.get('email'):
+    if claims.get('iss') not in ('accounts.google.com','https://accounts.google.com') or claims.get('aud')!=settings.google_client_id.strip() or not claims.get('email_verified') or not claims.get('sub') or not claims.get('email'):
         raise HTTPException(401,'Google account verification failed')
     return claims
 

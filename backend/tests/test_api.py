@@ -790,3 +790,11 @@ def test_autonomous_provider_failures_update_health_safely(client,monkeypatch,co
     health=client.get('/api/platforms/status',headers=a).json()['provider_health']
     assert health['status']==status and health['request_id']=='provider-failure'
     assert 'test-private-provider-secret' not in json.dumps(health)+client.get('/api/activity',headers=a).text
+
+
+@pytest.mark.parametrize('configured,expected,error',[(' 12345-test.apps.googleusercontent.com ','12345-test.apps.googleusercontent.com',None),('','', 'missing_client_id'),('accidentally-pasted-client-secret','','invalid_client_id')])
+def test_google_public_config_is_normalized_and_does_not_expose_bad_credentials(client,monkeypatch,configured,expected,error):
+    monkeypatch.setattr(settings,'google_client_id',configured)
+    response=client.get('/api/auth/config')
+    assert response.status_code==200 and response.json()=={'google_client_id':expected,'google_setup_error':error}
+    if error and configured:assert configured not in response.text

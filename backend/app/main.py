@@ -191,7 +191,7 @@ async def invalid_request(request:Request,error:RequestValidationError):
     return JSONResponse({'detail':'Invalid request fields','errors':[{'field':'.'.join(map(str,x['loc'])),'message':x['msg']} for x in error.errors()],'request_id':getattr(request.state,'request_id',None)},status_code=422)
 
 @app.get('/api/auth/config')
-def auth_config(): return {'google_client_id':settings.google_client_id}
+def auth_config(): return accounts.google_configuration()
 @app.post('/api/auth/google/challenge')
 def google_challenge(): return accounts.google_challenge()
 @app.post('/api/auth/google')
